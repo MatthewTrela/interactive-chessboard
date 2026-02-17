@@ -1,2 +1,2 @@
-# interactive-chessboard
-Repository for smart chess board designed in ECE 445. Detects moves on chess board and displays best move and legal moves. Also detects error states.
+# Lab Notebooks Branch
+Conatains lab notebooks that doccument progress on the construction of the chessboard
