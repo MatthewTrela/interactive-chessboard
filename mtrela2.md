@@ -1,3 +1,4 @@
+## ECE 445 Lab notebook for Matthew Trela (mtrela2)
 ## 1/29/26
 Formed complete lab group arround the idea to make a chessboard that can detect where the pieces are on the board and then uses an array of LEDs under the squares to enhance gameplay by lighting up legal moves for the piece you pick up or showing the best move in the position. The group members are me, Tim Chen, and Jeanjuella Tipan. I wrote most of the RFA, and we got RFA approval and are working on ironing out details of construction and approach. 
 
@@ -10,3 +11,8 @@ Worked on some sketches on how we could configure our lights, sensors, and pcb b
 
 ## 2/12/26
 Working on getting the project proposal finished. For the project proposal I made the block diagram, some of the high level requirements, the subsystem goals, tolerence analysis for the reed sensors, and did all the formatting.
+
+## 2/20/26
+We are finalizing some details of our design and working on getting things ordered. Today, we got out initial PCB board design reviewed and finished out team contract. The next big milestone is the breadboard demo, so we made a list of the bare essentials we need for the breadboard demo and made an order. We got reed switches, the LED strip, a through hole GPIO expander, and magnets of different strengths for testing. The plan for the breadboard demo is a proof of concept that we can power and read 16 reed switches from one GPIO expander and that we can then parse and use those readings to control some LEDs. Also thinking ahead, I put together a sketch with some simple dimensions that outlines what are finsihed board will look like. The idea is to use this sketch for reference when talking to the machine shop, and while we continue to design and put stuff together. 
+
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/bb86b5b0-39e2-43cd-a75d-9949fe2a9613" />
