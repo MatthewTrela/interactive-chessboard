@@ -6,3 +6,8 @@ Also completed tolerance analysis for power consumption.
 
 # Week of 2/15-2/21
 Completed the team contract with the rest of the group.
+
+# Week of 2/22-2/28
+Completed sections of design document:
+- Cost Analysis, List of parts, labor, total
+- Requirements and Verification for subsystems
