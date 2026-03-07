@@ -11,3 +11,11 @@ Completed the team contract with the rest of the group.
 Completed sections of design document:
 - Cost Analysis, List of parts, labor, total
 - Requirements and Verification for subsystems
+
+# Week of 3/1 - 3/7
+Completed Breadboard demo code
+- Code for IO expander connection (polling -> interrupt)
+- Code for OLED display outputting IO expander input
+- Debounce switches
+Completed breadboard circuiting
+- Reference datasheets and documentation to wire up all components
