@@ -17,5 +17,6 @@ Completed Breadboard demo code
 - Code for IO expander connection (polling -> interrupt)
 - Code for OLED display outputting IO expander input
 - Debounce switches
+
 Completed breadboard circuiting
 - Reference datasheets and documentation to wire up all components
