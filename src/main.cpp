@@ -21,10 +21,25 @@ MCP23S17 expander1(10, 0, &SPI);
 
 uint16_t lastValues = 0;
 uint16_t curVal = 0;
+uint16_t debouncedValues = 0;
+
+// For interrupt handling
+volatile bool interruptTriggered = false;
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
+// for debouncing
+unsigned long lastInterruptTime = 0;
+const unsigned long DEBOUNCE_DELAY_MS = 15;
 
 // for display
 unsigned long lastDisplayUpdate = 0;
 const unsigned long DISPLAY_INTERVAL = 100;
+
+void IRAM_ATTR onExpanderInterrupt() {
+    portENTER_CRITICAL_ISR(&mux);
+    interruptTriggered = true;
+    portEXIT_CRITICAL_ISR(&mux);
+}
 
 void setup() {
     Serial.begin(115200);
@@ -34,29 +49,6 @@ void setup() {
 
     // I2C
     Wire.begin(I2C_SDA, I2C_SCL);
-
-    ////////
-
-    // Add this temporarily to setup() after Wire.begin()
-    Serial.println("Scanning I2C bus...");
-    int deviceCount = 0;
-    for (byte address = 1; address < 127; address++) {
-        Wire.beginTransmission(address);
-        if (Wire.endTransmission() == 0) {
-            Serial.print("Found device at 0x");
-            Serial.println(address, HEX);
-            deviceCount++;
-        }
-    }
-    if (deviceCount == 0) {
-        Serial.println("No I2C devices found! Check wiring and pins.");
-    } else {
-        Serial.print("Found ");
-        Serial.print(deviceCount);
-        Serial.println(" I2C devices");
-    }
-
-    ////////////
 
     Serial.print("I2C initialized on SDA=");
     Serial.print(I2C_SDA);
@@ -104,6 +96,16 @@ void setup() {
         // Set all 16 pins as inputs with pull-ups
         expander1.pinMode16(0xFFFF);    // All inputs
         expander1.setPullup16(0xFFFF);  // All pull-ups enabled
+
+        expander1.enableInterrupt16(0xFFFF, CHANGE);  // enable interrupts for all pins
+
+        expander1.setInterruptPolarity(1);  // Active HIGH
+
+        // initial state
+        debouncedValues = expander1.read16();
+        lastValues = debouncedValues;
+        curVal = debouncedValues;
+
         Serial.println("Expander 1 ready");
     }
 }
@@ -125,37 +127,60 @@ void drawBinaryRow(int y, const char* label, uint16_t value, bool highlight) {
     }
 }
 
+uint16_t readWithDebounce() {
+    uint16_t firstRead = expander1.read16();
+    delay(DEBOUNCE_DELAY_MS);
+    uint16_t secondRead = expander1.read16();
+
+    if (firstRead == secondRead) {
+        return firstRead;
+    } else {
+        // retry if unstable
+        delay(DEBOUNCE_DELAY_MS);
+        return expander1.read16();
+    }
+}
+
 void loop() {
-    // read all inputs
-    curVal = expander1.read16();
+    if (interruptTriggered) {
+        portENTER_CRITICAL(&mux);
+        interruptTriggered = false;
+        portEXIT_CRITICAL(&mux);
 
-    bool changed = (curVal != lastValues);
+        unsigned long curTime = millis();
 
-    if (changed) {
-        Serial.print("Expander 1: ");
-        // Print binary representation
-        for (int i = 15; i >= 0; i--) {
-            Serial.print((curVal >> i) & 1);
-            if (i % 4 == 0) Serial.print(" ");
+        // debounce interrupt
+        if (curTime - lastInterruptTime > DEBOUNCE_DELAY_MS) {
+            lastInterruptTime = curTime;
+
+            // read what pins caused interrupt, clear flags
+            uint16_t interruptFlag = expander1.getInterruptFlagRegister();
+            uint16_t interruptCapture = expander1.getInterruptCaptureRegister();
+
+            uint16_t newValues = readWithDebounce();
+
+            // Update if changed and stable
+            if (newValues != debouncedValues) {
+                debouncedValues = newValues;
+                curVal = debouncedValues;  // Update display value
+
+                // Print to serial
+                Serial.print("Interrupt! Changed pins: 0x");
+                Serial.print(interruptFlag, HEX);
+                Serial.print(" New value: ");
+                for (int i = 15; i >= 0; i--) {
+                    Serial.print((curVal >> i) & 1);
+                    if (i % 4 == 0) Serial.print(" ");
+                }
+            }
         }
-        Serial.print(" (0x");
-        Serial.print(curVal, HEX);
-        Serial.print(") - ");
-
-        // Count LOW pins
-        int lowCount = 0;
-        for (int i = 0; i < 16; i++) {
-            if (!((curVal >> i) & 1)) lowCount++;
-        }
-        Serial.print(lowCount);
-        Serial.println(" pins LOW");
-
-        lastValues = curVal;
     }
 
-    // Update OLED display periodically
-    unsigned long now = millis();
-    if (now - lastDisplayUpdate >= DISPLAY_INTERVAL) {
+    // update OLED periodically
+    unsigned long curTime = millis();
+    if (curTime - lastDisplayUpdate >= DISPLAY_INTERVAL) {
+        bool changed = (curVal != lastValues);
+
         display.clearDisplay();
 
         // Title
@@ -165,10 +190,10 @@ void loop() {
         display.println("Input Status");
         display.drawLine(0, 8, 127, 8, SSD1306_WHITE);
 
-        // Expander 1 - using curVal and changed
-        drawBinaryRow(12, "EXP1:", curVal, changed);
+        // Expander 1
+        drawBinaryRow(12, "", curVal, changed);
 
-        // Count LOW pins (inputs connected to GND)
+        // Count LOW pins
         int lowCount = 0;
         for (int i = 0; i < 16; i++) {
             if (!((curVal >> i) & 1)) lowCount++;
@@ -182,19 +207,15 @@ void loop() {
         // Show raw hex value
         display.setCursor(0, 45);
         display.print("HEX: 0x");
-        if (curVal < 0x1000) display.print("0");  // Padding for smaller values
+        if (curVal < 0x1000) display.print("0");
         if (curVal < 0x100) display.print("0");
         if (curVal < 0x10) display.print("0");
         display.print(curVal, HEX);
 
-        // Show decimal value
-        display.setCursor(0, 55);
-        display.print("DEC: ");
-        display.print(curVal);
-
         display.display();
-        lastDisplayUpdate = now;
+        lastDisplayUpdate = curTime;
+        lastValues = curVal;  // update last values
     }
 
-    delay(10);  // Small delay to prevent overwhelming
+    delay(1);
 }
