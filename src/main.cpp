@@ -13,6 +13,8 @@
 #define I2C_SDA 20
 #define I2C_SCL 19
 
+#define MCP_INT_PIN 1
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Create expander objects directly
@@ -60,21 +62,7 @@ void setup() {
     Serial.println("...");
 
     if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
-        Serial.println("OLED not found at 0x3C! Trying 0x3D...");
-
-        if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3D)) {
-            Serial.println("OLED not found at 0x3D either!");
-            Serial.println("Check your wiring and I2C pins!");
-        } else {
-            Serial.println("OLED initialized at 0x3D");
-            display.clearDisplay();
-            display.setTextSize(1);
-            display.setTextColor(SSD1306_WHITE);
-            display.setCursor(0, 0);
-            display.println("OLED Ready!");
-            display.display();
-            delay(1000);
-        }
+        Serial.println("OLED not found at 0x3C!");
     } else {
         Serial.println("OLED initialized at 0x3C");
         display.clearDisplay();
@@ -105,6 +93,12 @@ void setup() {
         debouncedValues = expander1.read16();
         lastValues = debouncedValues;
         curVal = debouncedValues;
+
+        // interrupt pin
+        pinMode(MCP_INT_PIN, INPUT_PULLDOWN);
+        expander1.mirrorInterrupts(true);
+
+        attachInterrupt(digitalPinToInterrupt(MCP_INT_PIN), onExpanderInterrupt, RISING);
 
         Serial.println("Expander 1 ready");
     }
