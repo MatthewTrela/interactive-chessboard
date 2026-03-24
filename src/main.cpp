@@ -4,6 +4,7 @@
 #include <MCP23S17.h>
 #include <SPI.h>
 #include <Wire.h>
+#include <Adafruit_NeoPixel.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -15,7 +16,11 @@
 
 #define MCP_INT_PIN 1
 
+#define LED_PIN 5
+#define NUM_LEDS 4
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // Create expander objects directly
 // Format: MCP23S17(csPin, address, &SPI)
@@ -102,6 +107,11 @@ void setup() {
 
         Serial.println("Expander 1 ready");
     }
+
+    strip.begin();
+    strip.setBrightness(50);
+    strip.fill(strip.Color(255, 255, 255)); // white
+    strip.show();
 }
 
 void drawBinaryRow(int y, const char* label, uint16_t value, bool highlight) {
