@@ -16,7 +16,7 @@ void initExpanders() {
         expanders[i]->setPullup16(0xFFFF);
 
         expanders[i]->enableInterrupt16(0xFFFF, CHANGE);
-        expanders[i]->setInterruptPolarity(1);
+        expanders[i]->setInterruptPolarity(2);
 
         // Mirror INTA and INTB (use one interrupt pin per chip)
         expanders[i]->mirrorInterrupts(true);
