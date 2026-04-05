@@ -1,0 +1,69 @@
+#ifndef GLOBAL_H
+#define GLOBAL_H
+
+#include <Adafruit_GFX.h>
+#include <Adafruit_NeoPixel.h>
+#include <Adafruit_SSD1306.h>
+#include <Arduino.h>
+#include <MCP23S17.h>
+
+// I2C Pins
+#define I2C_SDA 20
+#define I2C_SCL 19
+
+// SPI Pins
+#define SPI_MOSI 11
+#define SPI_MISO 12
+#define SPI_SCK 13
+#define SPI_CS_MCP 10  // Shared CS for all MCP23S17
+
+// MCP23S17
+#define NUM_EXPANDERS 4
+
+#define MCP_ADDR_1 0  // 000
+#define MCP_ADDR_2 1  // 001
+#define MCP_ADDR_3 2  // 010
+#define MCP_ADDR_4 3  // 011
+
+#define MCP_INT_PIN 1
+
+#define MCP_DEBOUNCE_DELAY_MS 15
+
+// OLED
+#define OLED_ADDRESS 0x3C
+#define OLED_RESET -1
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define OLED_TITLE_Y 0
+#define OLED_LINE_Y 8
+#define OLED_EXPANDER_ROW_HEIGHT 12
+#define OLED_FIRST_EXPANDER_Y 12
+#define OLED_STATUS_Y 58
+
+#define OLED_UPDATE_INTERVAL_MS 100
+
+// LED Strip
+#define LED_PIN -1
+#define NUM_LEDS -1
+#define LED_BRIGHTNESS 255
+
+// ========== GLOBAL OBJECTS (Declared as extern) ==========
+extern Adafruit_SSD1306* display;
+extern Adafruit_NeoPixel* strip;
+
+// MCP23S17 objects
+extern MCP23S17* expanders[4];
+
+// ========== GLOBAL VARIABLES ==========
+extern uint16_t mcpValues[4];      // Current values for each expander
+extern uint16_t mcpLastValues[4];  // Previous values for debouncing
+extern volatile bool interruptTriggered;
+
+extern unsigned long lastInterruptTime;
+extern unsigned long lastDisplayUpdate;
+
+// ========== FUNCTION DECLARATIONS ==========
+void initGlobals();  // Call this in setup() to initialize all objects
+
+#endif

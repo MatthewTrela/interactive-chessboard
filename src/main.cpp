@@ -1,10 +1,10 @@
 #include <Adafruit_GFX.h>
+#include <Adafruit_NeoPixel.h>
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 #include <MCP23S17.h>
 #include <SPI.h>
 #include <Wire.h>
-#include <Adafruit_NeoPixel.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -15,6 +15,7 @@
 #define I2C_SCL 19
 
 #define MCP_INT_PIN 1
+#define MCP_CS_PIN 10
 
 #define LED_PIN 5
 #define NUM_LEDS 4
@@ -24,7 +25,10 @@ Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // Create expander objects directly
 // Format: MCP23S17(csPin, address, &SPI)
-MCP23S17 expander1(10, 0, &SPI);
+MCP23S17 expander1(MCP_CS_PIN, 0, &SPI);
+MCP23S17 expander2(MCP_CS_PIN, 1, &SPI);
+MCP23S17 expander3(MCP_CS_PIN, 2, &SPI);
+MCP23S17 expander4(MCP_CS_PIN, 3, &SPI);
 
 uint16_t lastValues = 0;
 uint16_t curVal = 0;
@@ -32,6 +36,7 @@ uint16_t debouncedValues = 0;
 
 // For interrupt handling
 volatile bool interruptTriggered = false;
+volatile uint8_t lastTriggeredExpander = 0xFF;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 // for debouncing
@@ -82,36 +87,43 @@ void setup() {
     SPI.begin();
 
     // Initialize each expander
-    Serial.println("Initializing Expander 1...");
-    if (!expander1.begin()) {
-        Serial.println("Failed to initialize Expander 1!");
-    } else {
-        // Set all 16 pins as inputs with pull-ups
-        expander1.pinMode16(0xFFFF);    // All inputs
-        expander1.setPullup16(0xFFFF);  // All pull-ups enabled
+    Serial.println("Initializing Expanders");
+    initExpander(expander1, 0);
+    initExpander(expander2, 1);
+    initExpander(expander3, 2);
+    initExpander(expander4, 3);
 
-        expander1.enableInterrupt16(0xFFFF, CHANGE);  // enable interrupts for all pins
-
-        expander1.setInterruptPolarity(1);  // Active HIGH
-
-        // initial state
-        debouncedValues = expander1.read16();
-        lastValues = debouncedValues;
-        curVal = debouncedValues;
-
-        // interrupt pin
-        pinMode(MCP_INT_PIN, INPUT_PULLDOWN);
-        expander1.mirrorInterrupts(true);
-
-        attachInterrupt(digitalPinToInterrupt(MCP_INT_PIN), onExpanderInterrupt, RISING);
-
-        Serial.println("Expander 1 ready");
-    }
+    pinMode(MCP_INT_PIN, INPUT_PULLDOWN);
+    attachInterrupt(digitalPinToInterrupt(MCP_INT_PIN), onExpanderInterrupt, RISING);
 
     strip.begin();
     strip.setBrightness(50);
-    strip.fill(strip.Color(255, 255, 255)); // white
+    strip.fill(strip.Color(255, 255, 255));  // white
     strip.show();
+}
+
+void initExpander(MCP23S17& expander, int addr) {
+    if (!expander.begin()) {
+        Serial.print("Failed to initialize Expander address ");
+        Serial.println(addr);
+        return;
+    }
+
+    // Enable hardware addressing
+    expander.enableHardwareAddress();
+
+    expander.pinMode16(0xFFFF);
+    expander.setPullup16(0xFFFF);
+
+    // interrupt pin
+    expander.enableInterrupt16(0xFFFF, CHANGE);
+    expander.setInterruptPolarity(1);  // active high
+    expander.mirrorInterrupts(true);
+
+    // init vals
+    debouncedValues = expander.read16();
+    lastValues = debouncedValues;
+    curVal = debouncedValues;
 }
 
 void drawBinaryRow(int y, const char* label, uint16_t value, bool highlight) {
@@ -150,6 +162,11 @@ void loop() {
         portENTER_CRITICAL(&mux);
         interruptTriggered = false;
         portEXIT_CRITICAL(&mux);
+
+        checkExpanderInterrupt(expander1, &debouncedValues1, 0);
+        checkExpanderInterrupt(expander2, &debouncedValues2, 1);
+        checkExpanderInterrupt(expander3, &debouncedValues3, 2);
+        checkExpanderInterrupt(expander4, &debouncedValues4, 3);
 
         unsigned long curTime = millis();
 
@@ -208,13 +225,17 @@ void loop() {
         display.print(lowCount);
         display.print("/16");
 
-        // Show raw hex value
+        // // Show raw hex value
+        // display.setCursor(0, 45);
+        // display.print("HEX: 0x");
+        // if (curVal < 0x1000) display.print("0");
+        // if (curVal < 0x100) display.print("0");
+        // if (curVal < 0x10) display.print("0");
+        // display.print(curVal, HEX);
+
         display.setCursor(0, 45);
-        display.print("HEX: 0x");
-        if (curVal < 0x1000) display.print("0");
-        if (curVal < 0x100) display.print("0");
-        if (curVal < 0x10) display.print("0");
-        display.print(curVal, HEX);
+        display.print("Interrupt: ");
+        display.print(interruptTriggered);
 
         display.display();
         lastDisplayUpdate = curTime;
