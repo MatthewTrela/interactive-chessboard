@@ -300,14 +300,14 @@ void testAllLEDs() {
             clearAllLEDs();
             setLED(row, col, LED_ON);
             flushLEDBuffer();
-            delay(50);
+            delay(1000);
         }
     }
 
     // Test pattern: all on
     setAllLEDs(LED_ON);
     flushLEDBuffer();
-    delay(500);
+    delay(1000);
 
     // Test pattern: all off
     clearAllLEDs();

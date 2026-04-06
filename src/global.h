@@ -44,8 +44,8 @@
 #define OLED_UPDATE_INTERVAL_MS 100
 
 // LED Strip
-#define LED_PIN -1
-#define NUM_LEDS -1
+#define LED_PIN 5
+#define NUM_LEDS 64
 #define LED_BRIGHTNESS 255
 
 // ========== GLOBAL OBJECTS (Declared as extern) ==========

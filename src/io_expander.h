@@ -6,5 +6,6 @@
 void initExpanders();
 void checkAllExpandersForInterrupt();  // Sweep all devices
 uint16_t readWithDebounce(MCP23S17* expander);
+void IRAM_ATTR onExpanderInterrupt();
 
 #endif

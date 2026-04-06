@@ -1,5 +1,4 @@
 #include "io_expander.h"
-
 #include "global.h"
 
 void initExpanders() {
@@ -34,8 +33,8 @@ void initExpanders() {
     }
 
     // Setup shared interrupt pin
-    pinMode(MCP_INT_PIN, INPUT_PULLDOWN);
-    attachInterrupt(digitalPinToInterrupt(MCP_INT_PIN), onExpanderInterrupt, RISING);
+    pinMode(MCP_INT_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(MCP_INT_PIN), onExpanderInterrupt, FALLING);
 }
 
 // ISR
@@ -81,14 +80,14 @@ void checkAllExpandersForInterrupt() {
 
 uint16_t readWithDebounce(MCP23S17* expander) {
     uint16_t firstRead = expander->read16();
-    delay(DEBOUNCE_DELAY_MS);
+    delay(MCP_DEBOUNCE_DELAY_MS);
     uint16_t secondRead = expander->read16();
 
     if (firstRead == secondRead) {
         return firstRead;
     } else {
         // Retry if unstable
-        delay(DEBOUNCE_DELAY_MS);
+        delay(MCP_DEBOUNCE_DELAY_MS);
         return expander->read16();
     }
 }
