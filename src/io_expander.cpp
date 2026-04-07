@@ -1,7 +1,7 @@
 #include "io_expander.h"
 #include "global.h"
 
-void initExpanders() {
+void initExpanders(bool polling) {
     for (int i = 0; i < 4; i++) {
         if (!expanders[i]->begin()) {
             Serial.print("Failed to initialize Expander ");
@@ -14,11 +14,13 @@ void initExpanders() {
         expanders[i]->pinMode16(0xFFFF);
         expanders[i]->setPullup16(0xFFFF);
 
-        expanders[i]->enableInterrupt16(0xFFFF, CHANGE);
-        expanders[i]->setInterruptPolarity(2);
+        if (!polling) {
+            expanders[i]->enableInterrupt16(0xFFFF, CHANGE);
+            expanders[i]->setInterruptPolarity(2);
 
-        // Mirror INTA and INTB (use one interrupt pin per chip)
-        expanders[i]->mirrorInterrupts(true);
+            // Mirror INTA and INTB (use one interrupt pin per chip)
+            expanders[i]->mirrorInterrupts(true);
+        }
 
         // Read initial state
         mcpValues[i] = expanders[i]->read16();
@@ -33,8 +35,10 @@ void initExpanders() {
     }
 
     // Setup shared interrupt pin
-    pinMode(MCP_INT_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(MCP_INT_PIN), onExpanderInterrupt, FALLING);
+    if (!polling) {
+        pinMode(MCP_INT_PIN, INPUT_PULLUP);
+        attachInterrupt(digitalPinToInterrupt(MCP_INT_PIN), onExpanderInterrupt, FALLING);
+    }
 }
 
 // ISR
@@ -90,4 +94,11 @@ uint16_t readWithDebounce(MCP23S17* expander) {
         delay(MCP_DEBOUNCE_DELAY_MS);
         return expander->read16();
     }
+}
+
+void poll() {
+    for (int i = 0; i < 4; i++) {
+        mcpLastValues[i] = mcpValues[i];
+        mcpValues[i] = expanders[i]->read16();
+    }  
 }
