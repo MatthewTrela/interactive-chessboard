@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-// Arduino entry points
 void setup();
 void loop();
 
