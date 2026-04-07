@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../Desktop/ECE445 ESP32"
+		},
+		{
+			"name": "ECE445ChessBoard",
+			"path": "."
+		}
+	],
+	"settings": {}
+}

@@ -18,14 +18,50 @@ static struct {
     bool valid;
 } pinMapping[4][16];
 
+struct InputRef {
+    uint8_t exp1;
+    uint8_t pin1;
+};
+
+static const uint8_t swToIdx[17] = {
+    0xFF,
+    13,  // SW1  = GPA5
+    12,  // SW2  = GPA4
+    11,  // SW3  = GPA3
+    10,  // SW4  = GPA2
+    15,  // SW5  = GPA7
+    14,  // SW6  = GPA6
+    8,   // SW7  = GPA0
+    9,   // SW8  = GPA1
+    0,   // SW9  = GPB0
+    1,   // SW10 = GPB1
+    5,   // SW11 = GPB5
+    7,   // SW12 = GPB7
+    2,   // SW13 = GPB2
+    3,   // SW14 = GPB3
+    4,   // SW15 = GPB4
+    6    // SW16 = GPB6
+};
+
+const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2, 12}, {2, 8}, {2, 4}},
+                                   {{1, 2}, {1, 6}, {1, 10}, {1, 14}, {2, 15}, {2, 11}, {2, 7}, {2, 3}},
+                                   {{1, 3}, {1, 7}, {1, 11}, {1, 15}, {2, 14}, {2, 10}, {2, 6}, {2, 2}},
+                                   {{1, 4}, {1, 8}, {1, 12}, {1, 16}, {2, 13}, {2, 9}, {2, 5}, {2, 1}},
+                                   {{4, 1}, {4, 5}, {4, 9}, {4, 13}, {3, 16}, {3, 12}, {3, 8}, {3, 4}},
+                                   {{4, 2}, {4, 6}, {4, 10}, {4, 14}, {3, 15}, {3, 11}, {3, 7}, {3, 3}},
+                                   {{4, 3}, {4, 7}, {4, 11}, {4, 15}, {3, 14}, {3, 10}, {3, 6}, {3, 2}},
+                                   {{4, 4}, {4, 8}, {4, 12}, {4, 16}, {3, 13}, {3, 9}, {3, 5}, {3, 1}}};
+
 // ========== FLUSH THROTTLING ==========
 static unsigned long lastFlushTime = 0;
 
 // ========== HELPER FUNCTIONS ==========
 uint8_t getLEDIndex(uint8_t row, uint8_t col) {
-    // Convert 8x8 grid to linear strip index
-    // Row-major order: row0: cols0-7, row1: cols8-15, etc.
-    return (row * 8) + col;
+    if ((row % 2) == 0) {
+        return row * 8 + col;  // even row: L->R
+    } else {
+        return row * 8 + (7 - col);  // odd row: R->L
+    }
 }
 
 // ========== INITIALIZATION ==========
@@ -38,17 +74,8 @@ void initLEDs() {
 
     clearAllLEDs();
 
-    for (int exp = 0; exp < 4; exp++) {
-        for (int pin = 0; pin < 16; pin++) {
-            pinMapping[exp][pin].valid = false;
-            pinMapping[exp][pin].row = 0;
-            pinMapping[exp][pin].col = 0;
-        }
-    }
-
     // Load mapping
-    // should be custom !!!!!!!!
-    loadDefaultMapping();
+    loadCustomMapping();
 
     Serial.println("LED strip initialized");
 
@@ -192,102 +219,19 @@ void setLEDMapping(uint8_t expander, uint8_t pin, uint8_t row, uint8_t col) {
     Serial.println(")");
 }
 
-void loadDefaultMapping() {
-    Serial.println("Loading default LED mapping (natural grid)...");
+void loadCustomMapping() {
+    for (uint8_t row = 0; row < 8; row++) {
+        for (uint8_t col = 0; col < 8; col++) {
+            uint8_t exp1 = switchGrid[row][col].exp1;  // 1..4
+            uint8_t sw = switchGrid[row][col].pin1;    // SW number 1..16
 
-    // Natural mapping: Each expander controls 2 rows of 8 columns
-    // Expander 0 → Rows 0-1
-    // Expander 1 → Rows 2-3
-    // Expander 2 → Rows 4-5
-    // Expander 3 → Rows 6-7
+            if (exp1 < 1 || exp1 > 4 || sw < 1 || sw > 16) continue;
 
-    for (int exp = 0; exp < 4; exp++) {
-        for (int pin = 0; pin < 16; pin++) {
-            int row = (exp * 2) + (pin / 8);  // Integer division: 0-7 for first 8 pins, 1 for next 8
-            int col = pin % 8;                // 0-7 for column
-            setLEDMapping(exp, pin, row, col);
+            uint8_t idx = swToIdx[sw];
+            if (idx == 0xFF) continue;
+            setLEDMapping(exp1 - 1, idx, row, col);
         }
     }
-}
-
-void loadCustomMapping() {
-    Serial.println("Loading custom LED mapping...");
-
-    // Each expander has 16 pins (0-15)
-    // Each LED is at a grid position (row 0-7, col 0-7)
-    // setLEDMapping(expander, pin, row, col);
-
-    // Expander 0 (address 0)
-    setLEDMapping(0, 0, 0, 0);
-    setLEDMapping(0, 1, 0, 1);
-    setLEDMapping(0, 2, 0, 2);
-    setLEDMapping(0, 3, 0, 3);
-    setLEDMapping(0, 4, 0, 4);
-    setLEDMapping(0, 5, 0, 5);
-    setLEDMapping(0, 6, 0, 6);
-    setLEDMapping(0, 7, 0, 7);
-    setLEDMapping(0, 8, 1, 0);
-    setLEDMapping(0, 9, 1, 1);
-    setLEDMapping(0, 10, 1, 2);
-    setLEDMapping(0, 11, 1, 3);
-    setLEDMapping(0, 12, 1, 4);
-    setLEDMapping(0, 13, 1, 5);
-    setLEDMapping(0, 14, 1, 6);
-    setLEDMapping(0, 15, 1, 7);
-
-    // Expander 1 (address 1)
-    setLEDMapping(1, 0, 2, 0);
-    setLEDMapping(1, 1, 2, 1);
-    setLEDMapping(1, 2, 2, 2);
-    setLEDMapping(1, 3, 2, 3);
-    setLEDMapping(1, 4, 2, 4);
-    setLEDMapping(1, 5, 2, 5);
-    setLEDMapping(1, 6, 2, 6);
-    setLEDMapping(1, 7, 2, 7);
-    setLEDMapping(1, 8, 3, 0);
-    setLEDMapping(1, 9, 3, 1);
-    setLEDMapping(1, 10, 3, 2);
-    setLEDMapping(1, 11, 3, 3);
-    setLEDMapping(1, 12, 3, 4);
-    setLEDMapping(1, 13, 3, 5);
-    setLEDMapping(1, 14, 3, 6);
-    setLEDMapping(1, 15, 3, 7);
-
-    // Expander 2 (address 2)
-    setLEDMapping(2, 0, 4, 0);
-    setLEDMapping(2, 1, 4, 1);
-    setLEDMapping(2, 2, 4, 2);
-    setLEDMapping(2, 3, 4, 3);
-    setLEDMapping(2, 4, 4, 4);
-    setLEDMapping(2, 5, 4, 5);
-    setLEDMapping(2, 6, 4, 6);
-    setLEDMapping(2, 7, 4, 7);
-    setLEDMapping(2, 8, 5, 0);
-    setLEDMapping(2, 9, 5, 1);
-    setLEDMapping(2, 10, 5, 2);
-    setLEDMapping(2, 11, 5, 3);
-    setLEDMapping(2, 12, 5, 4);
-    setLEDMapping(2, 13, 5, 5);
-    setLEDMapping(2, 14, 5, 6);
-    setLEDMapping(2, 15, 5, 7);
-
-    // Expander 3 (address 3)
-    setLEDMapping(3, 0, 6, 0);
-    setLEDMapping(3, 1, 6, 1);
-    setLEDMapping(3, 2, 6, 2);
-    setLEDMapping(3, 3, 6, 3);
-    setLEDMapping(3, 4, 6, 4);
-    setLEDMapping(3, 5, 6, 5);
-    setLEDMapping(3, 6, 6, 6);
-    setLEDMapping(3, 7, 6, 7);
-    setLEDMapping(3, 8, 7, 0);
-    setLEDMapping(3, 9, 7, 1);
-    setLEDMapping(3, 10, 7, 2);
-    setLEDMapping(3, 11, 7, 3);
-    setLEDMapping(3, 12, 7, 4);
-    setLEDMapping(3, 13, 7, 5);
-    setLEDMapping(3, 14, 7, 6);
-    setLEDMapping(3, 15, 7, 7);
 }
 
 // ========== TEST FUNCTIONS ==========
@@ -300,7 +244,7 @@ void testAllLEDs() {
             clearAllLEDs();
             setLED(row, col, LED_ON);
             flushLEDBuffer();
-            delay(1000);
+            delay(15);
         }
     }
 
