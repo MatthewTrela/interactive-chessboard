@@ -18,14 +18,25 @@ static struct {
     bool valid;
 } pinMapping[4][16];
 
+struct InputRef {
+    uint8_t exp1;
+    uint8_t pin1;
+};
+const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2, 12}, {2, 8}, {2, 4}},
+                                   {{1, 2}, {1, 6}, {1, 10}, {1, 14}, {2, 15}, {2, 11}, {2, 7}, {2, 3}},
+                                   {{1, 3}, {1, 7}, {1, 11}, {1, 15}, {2, 14}, {2, 10}, {2, 6}, {2, 2}},
+                                   {{1, 4}, {1, 8}, {1, 12}, {1, 16}, {2, 13}, {2, 19}, {2, 5}, {2, 1}}};
+
 // ========== FLUSH THROTTLING ==========
 static unsigned long lastFlushTime = 0;
 
 // ========== HELPER FUNCTIONS ==========
 uint8_t getLEDIndex(uint8_t row, uint8_t col) {
-    // Convert 8x8 grid to linear strip index
-    // Row-major order: row0: cols0-7, row1: cols8-15, etc.
-    return (row * 8) + col;
+    if ((row % 2) == 0) {
+        return row * 8 + col;  // even row: L->R
+    } else {
+        return row * 8 + (7 - col);  // odd row: R->L
+    }
 }
 
 // ========== INITIALIZATION ==========
@@ -38,17 +49,8 @@ void initLEDs() {
 
     clearAllLEDs();
 
-    for (int exp = 0; exp < 4; exp++) {
-        for (int pin = 0; pin < 16; pin++) {
-            pinMapping[exp][pin].valid = false;
-            pinMapping[exp][pin].row = 0;
-            pinMapping[exp][pin].col = 0;
-        }
-    }
-
     // Load mapping
-    // should be custom !!!!!!!!
-    loadDefaultMapping();
+    loadCustomMapping();
 
     Serial.println("LED strip initialized");
 
@@ -192,20 +194,12 @@ void setLEDMapping(uint8_t expander, uint8_t pin, uint8_t row, uint8_t col) {
     Serial.println(")");
 }
 
-void loadDefaultMapping() {
-    Serial.println("Loading default LED mapping (natural grid)...");
-
-    // Natural mapping: Each expander controls 2 rows of 8 columns
-    // Expander 0 → Rows 0-1
-    // Expander 1 → Rows 2-3
-    // Expander 2 → Rows 4-5
-    // Expander 3 → Rows 6-7
-
-    for (int exp = 0; exp < 4; exp++) {
-        for (int pin = 0; pin < 16; pin++) {
-            int row = (exp * 2) + (pin / 8);  // Integer division: 0-7 for first 8 pins, 1 for next 8
-            int col = pin % 8;                // 0-7 for column
-            setLEDMapping(exp, pin, row, col);
+void loadCustomMapping() {
+    for (uint8_t row = 0; row < 8; row++) {
+        for (uint8_t col = 0; col < 8; col++) {
+            uint8_t exp0 = switchGrid[row][col].exp1 - 1;
+            uint8_t pin0 = switchGrid[row][col].pin1 - 1;
+            setLEDMapping(exp0, pin0, row, col);
         }
     }
 }
