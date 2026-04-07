@@ -1,5 +1,5 @@
 #include "io_expander.h"
-
+#include "led.h"
 #include "global.h"
 
 bool expanderOnline[4] = {false, false, false, false};
@@ -90,7 +90,30 @@ uint16_t readWithDebounce(MCP23S17* expander) {
 void poll() {
     for (int i = 0; i < 4; i++) {
         if (!expanderOnline[i]) continue;
+        
+        // Save previous state and read new state
         mcpLastValues[i] = mcpValues[i];
         mcpValues[i] = expanders[i]->read16();
+
+        uint16_t currentVals = mcpValues[i];
+        uint16_t lastVals = mcpLastValues[i];
+
+        for (int j = 0; j < 16; j++) {
+            uint16_t mask = 1 << j;
+            
+            bool isPressed = !(currentVals & mask); 
+            bool wasPressed = !(lastVals & mask);
+
+            if (isPressed != wasPressed) {
+                clearAllLEDs();
+                setLEDFromInput(i, j, isPressed);
+                if (isPressed) {
+                    Serial.print("ADDR: ");
+                    Serial.print(i);
+                    Serial.print(" BIT: ");
+                    Serial.println(j);
+                }
+            }
+        }
     }
 }
