@@ -22,6 +22,27 @@ struct InputRef {
     uint8_t exp1;
     uint8_t pin1;
 };
+
+static const uint8_t swToMcpIdx[17] = {
+    0xFF,  // unused
+    5,     // SW1  -> GPA5
+    4,     // SW2  -> GPA4
+    3,     // SW3  -> GPA3
+    2,     // SW4  -> GPA2
+    7,     // SW5  -> GPA7
+    6,     // SW6  -> GPA6
+    0,     // SW7  -> GPA0
+    1,     // SW8  -> GPA1
+    8,     // SW9  -> GPB0
+    9,     // SW10 -> GPB1
+    13,    // SW11 -> GPB5
+    15,    // SW12 -> GPB7
+    10,    // SW13 -> GPB2
+    11,    // SW14 -> GPB3
+    12,    // SW15 -> GPB4
+    14     // SW16 -> GPB6
+};
+
 const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2, 12}, {2, 8}, {2, 4}},
                                    {{1, 2}, {1, 6}, {1, 10}, {1, 14}, {2, 15}, {2, 11}, {2, 7}, {2, 3}},
                                    {{1, 3}, {1, 7}, {1, 11}, {1, 15}, {2, 14}, {2, 10}, {2, 6}, {2, 2}},
@@ -201,9 +222,15 @@ void setLEDMapping(uint8_t expander, uint8_t pin, uint8_t row, uint8_t col) {
 void loadCustomMapping() {
     for (uint8_t row = 0; row < 8; row++) {
         for (uint8_t col = 0; col < 8; col++) {
-            uint8_t exp0 = switchGrid[row][col].exp1 - 1;
-            uint8_t pin0 = switchGrid[row][col].pin1 - 1;
-            setLEDMapping(exp0, pin0, row, col);
+            uint8_t exp1 = switchGrid[row][col].exp1;  // 1..4
+            uint8_t sw = switchGrid[row][col].pin1;    // SW number 1..16
+
+            if (exp1 < 1 || exp1 > 4 || sw < 1 || sw > 16) continue;
+
+            uint8_t mcpIdx = swToMcpIdx[sw];
+            if (mcpIdx == 0xFF) continue;
+
+            setLEDMapping(exp1 - 1, mcpIdx, row, col);
         }
     }
 }
