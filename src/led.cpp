@@ -25,7 +25,11 @@ struct InputRef {
 const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2, 12}, {2, 8}, {2, 4}},
                                    {{1, 2}, {1, 6}, {1, 10}, {1, 14}, {2, 15}, {2, 11}, {2, 7}, {2, 3}},
                                    {{1, 3}, {1, 7}, {1, 11}, {1, 15}, {2, 14}, {2, 10}, {2, 6}, {2, 2}},
-                                   {{1, 4}, {1, 8}, {1, 12}, {1, 16}, {2, 13}, {2, 19}, {2, 5}, {2, 1}}};
+                                   {{1, 4}, {1, 8}, {1, 12}, {1, 16}, {2, 13}, {2, 9}, {2, 5}, {2, 1}},
+                                   {{4, 1}, {4, 5}, {4, 9}, {4, 13}, {3, 16}, {3, 12}, {3, 8}, {3, 4}},
+                                   {{4, 2}, {4, 6}, {4, 10}, {4, 14}, {3, 15}, {3, 11}, {3, 7}, {3, 3}},
+                                   {{4, 3}, {4, 7}, {4, 11}, {4, 15}, {3, 14}, {3, 10}, {3, 6}, {3, 2}},
+                                   {{4, 4}, {4, 8}, {4, 12}, {4, 16}, {3, 13}, {3, 9}, {3, 5}, {3, 1}}};
 
 // ========== FLUSH THROTTLING ==========
 static unsigned long lastFlushTime = 0;
@@ -202,86 +206,6 @@ void loadCustomMapping() {
             setLEDMapping(exp0, pin0, row, col);
         }
     }
-}
-
-void loadCustomMapping() {
-    Serial.println("Loading custom LED mapping...");
-
-    // Each expander has 16 pins (0-15)
-    // Each LED is at a grid position (row 0-7, col 0-7)
-    // setLEDMapping(expander, pin, row, col);
-
-    // Expander 0 (address 0)
-    setLEDMapping(0, 0, 0, 0);
-    setLEDMapping(0, 1, 0, 1);
-    setLEDMapping(0, 2, 0, 2);
-    setLEDMapping(0, 3, 0, 3);
-    setLEDMapping(0, 4, 0, 4);
-    setLEDMapping(0, 5, 0, 5);
-    setLEDMapping(0, 6, 0, 6);
-    setLEDMapping(0, 7, 0, 7);
-    setLEDMapping(0, 8, 1, 0);
-    setLEDMapping(0, 9, 1, 1);
-    setLEDMapping(0, 10, 1, 2);
-    setLEDMapping(0, 11, 1, 3);
-    setLEDMapping(0, 12, 1, 4);
-    setLEDMapping(0, 13, 1, 5);
-    setLEDMapping(0, 14, 1, 6);
-    setLEDMapping(0, 15, 1, 7);
-
-    // Expander 1 (address 1)
-    setLEDMapping(1, 0, 2, 0);
-    setLEDMapping(1, 1, 2, 1);
-    setLEDMapping(1, 2, 2, 2);
-    setLEDMapping(1, 3, 2, 3);
-    setLEDMapping(1, 4, 2, 4);
-    setLEDMapping(1, 5, 2, 5);
-    setLEDMapping(1, 6, 2, 6);
-    setLEDMapping(1, 7, 2, 7);
-    setLEDMapping(1, 8, 3, 0);
-    setLEDMapping(1, 9, 3, 1);
-    setLEDMapping(1, 10, 3, 2);
-    setLEDMapping(1, 11, 3, 3);
-    setLEDMapping(1, 12, 3, 4);
-    setLEDMapping(1, 13, 3, 5);
-    setLEDMapping(1, 14, 3, 6);
-    setLEDMapping(1, 15, 3, 7);
-
-    // Expander 2 (address 2)
-    setLEDMapping(2, 0, 4, 0);
-    setLEDMapping(2, 1, 4, 1);
-    setLEDMapping(2, 2, 4, 2);
-    setLEDMapping(2, 3, 4, 3);
-    setLEDMapping(2, 4, 4, 4);
-    setLEDMapping(2, 5, 4, 5);
-    setLEDMapping(2, 6, 4, 6);
-    setLEDMapping(2, 7, 4, 7);
-    setLEDMapping(2, 8, 5, 0);
-    setLEDMapping(2, 9, 5, 1);
-    setLEDMapping(2, 10, 5, 2);
-    setLEDMapping(2, 11, 5, 3);
-    setLEDMapping(2, 12, 5, 4);
-    setLEDMapping(2, 13, 5, 5);
-    setLEDMapping(2, 14, 5, 6);
-    setLEDMapping(2, 15, 5, 7);
-
-    // Expander 3 (address 3)
-    setLEDMapping(3, 0, 6, 0);
-    setLEDMapping(3, 1, 6, 1);
-    setLEDMapping(3, 2, 6, 2);
-    setLEDMapping(3, 3, 6, 3);
-    setLEDMapping(3, 4, 6, 4);
-    setLEDMapping(3, 5, 6, 5);
-    setLEDMapping(3, 6, 6, 6);
-    setLEDMapping(3, 7, 6, 7);
-    setLEDMapping(3, 8, 7, 0);
-    setLEDMapping(3, 9, 7, 1);
-    setLEDMapping(3, 10, 7, 2);
-    setLEDMapping(3, 11, 7, 3);
-    setLEDMapping(3, 12, 7, 4);
-    setLEDMapping(3, 13, 7, 5);
-    setLEDMapping(3, 14, 7, 6);
-    setLEDMapping(3, 15, 7, 7);
 }
 
 // ========== TEST FUNCTIONS ==========
