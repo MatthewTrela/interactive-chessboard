@@ -13,7 +13,7 @@ void setup() {
     // Initialize peripherals
     initOLED();
     initLEDs();
-    initExpanders();
+    initExpanders(true);
 
     delay(1500);
 }
@@ -46,6 +46,7 @@ void loop() {
     // Update OLED periodically
     unsigned long now = millis();
     if (now - lastDisplayUpdate >= OLED_UPDATE_INTERVAL_MS) {
+        poll();
         updateDisplay();
         lastDisplayUpdate = now;
     }
