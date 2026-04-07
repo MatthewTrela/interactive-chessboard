@@ -23,24 +23,24 @@ struct InputRef {
     uint8_t pin1;
 };
 
-static const uint8_t swToMcpIdx[17] = {
-    0xFF,  // unused
-    5,     // SW1  -> GPA5
-    4,     // SW2  -> GPA4
-    3,     // SW3  -> GPA3
-    2,     // SW4  -> GPA2
-    7,     // SW5  -> GPA7
-    6,     // SW6  -> GPA6
-    0,     // SW7  -> GPA0
-    1,     // SW8  -> GPA1
-    8,     // SW9  -> GPB0
-    9,     // SW10 -> GPB1
-    13,    // SW11 -> GPB5
-    15,    // SW12 -> GPB7
-    10,    // SW13 -> GPB2
-    11,    // SW14 -> GPB3
-    12,    // SW15 -> GPB4
-    14     // SW16 -> GPB6
+static const uint8_t swToIdx[17] = {
+    0xFF,
+    13,  // SW1  = GPA5
+    12,  // SW2  = GPA4
+    11,  // SW3  = GPA3
+    10,  // SW4  = GPA2
+    15,  // SW5  = GPA7
+    14,  // SW6  = GPA6
+    8,   // SW7  = GPA0
+    9,   // SW8  = GPA1
+    0,   // SW9  = GPB0
+    1,   // SW10 = GPB1
+    5,   // SW11 = GPB5
+    7,   // SW12 = GPB7
+    2,   // SW13 = GPB2
+    3,   // SW14 = GPB3
+    4,   // SW15 = GPB4
+    6    // SW16 = GPB6
 };
 
 const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2, 12}, {2, 8}, {2, 4}},
@@ -227,10 +227,9 @@ void loadCustomMapping() {
 
             if (exp1 < 1 || exp1 > 4 || sw < 1 || sw > 16) continue;
 
-            uint8_t mcpIdx = swToMcpIdx[sw];
-            if (mcpIdx == 0xFF) continue;
-
-            setLEDMapping(exp1 - 1, mcpIdx, row, col);
+            uint8_t idx = swToIdx[sw];
+            if (idx == 0xFF) continue;
+            setLEDMapping(exp1 - 1, idx, row, col);
         }
     }
 }
@@ -245,7 +244,7 @@ void testAllLEDs() {
             clearAllLEDs();
             setLED(row, col, LED_ON);
             flushLEDBuffer();
-            delay(1000);
+            delay(15);
         }
     }
 
