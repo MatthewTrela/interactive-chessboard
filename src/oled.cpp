@@ -66,68 +66,6 @@ void displayDebugMessage(const char* line1, const char* line2) {
     display->display();
 }
 
-// void updateDisplay() {
-//     if (display == nullptr) return;
-
-//     bool anyChanged = false;
-
-//     // Check if any expander value changed since last display update
-//     for (int i = 0; i < NUM_EXPANDERS; i++) {
-//         if (mcpValues[i] != lastDisplayedValues[i]) {
-//             anyChanged = true;
-//             lastDisplayedValues[i] = mcpValues[i];
-//         }
-//     }
-
-//     // Only redraw if changes occurred or first run
-//     if (!anyChanged && !firstRun) {
-//         return;
-//     }
-//     firstRun = false;
-
-//     display->clearDisplay();
-
-//     // ===== TITLE SECTION =====
-//     display->setTextSize(1);
-//     display->setTextColor(SSD1306_WHITE);
-//     display->setCursor(0, OLED_TITLE_Y);
-//     display->println("I/O Expander Status");
-//     display->drawLine(0, OLED_LINE_Y, SCREEN_WIDTH - 1, OLED_LINE_Y, SSD1306_WHITE);
-
-//     // ===== EXPANDER ROWS =====
-//     for (int i = 0; i < NUM_EXPANDERS; i++) {
-//         int y = OLED_FIRST_EXPANDER_Y + (i * OLED_EXPANDER_ROW_HEIGHT);
-//         bool highlight = (mcpValues[i] != mcpLastValues[i]);
-//         drawBinaryRow(y, i, mcpValues[i], highlight);
-//     }
-
-//     // ===== STATUS LINE =====
-//     display->setTextColor(SSD1306_WHITE);
-//     display->setCursor(0, OLED_STATUS_Y);
-
-//     // Count total LOW pins across all expanders
-//     int totalLowPins = 0;
-//     for (int i = 0; i < NUM_EXPANDERS; i++) {
-//         for (int pin = 0; pin < 16; pin++) {
-//             if (!((mcpValues[i] >> pin) & 1)) {
-//                 totalLowPins++;
-//             }
-//         }
-//     }
-
-//     display->print("LOW:");
-//     display->print(totalLowPins);
-//     display->print("/");
-//     display->print(NUM_EXPANDERS * 16);
-
-//     // Show interrupt status
-//     display->setCursor(80, OLED_STATUS_Y);
-//     display->print("INT:");
-//     display->print(interruptTriggered ? "Pend" : "OK");
-
-//     display->display();
-// }
-
 void updateDisplay() {
     display->clearDisplay();
 
