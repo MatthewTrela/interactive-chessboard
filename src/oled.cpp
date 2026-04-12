@@ -159,15 +159,6 @@ void updateDisplay() {
         }
     }
 
-    // Status bar at bottom
-    int pressedCount = 0;
-    for (int r = 0; r < 8; r++)
-        for (int c = 0; c < 8; c++)
-            if (getSwitchStateFromGrid(r, c)) pressedCount++;
-
-    display->setCursor(0, OLED_STATUS_Y);
-    display->printf("Pressed: %d/64", pressedCount);
-
     display->display();
 }
 
