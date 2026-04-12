@@ -25,7 +25,8 @@ void loadDefaultMapping();  // Natural grid layout (exp0=rows0-1, exp1=rows2-3, 
 void loadCustomMapping();   // You can customize this for your orientation
 
 // Utility functions
-void testAllLEDs();                             // Test pattern to verify all LEDs work
-uint8_t getLEDIndex(uint8_t row, uint8_t col);  // Convert grid to strip index
+void testAllLEDs();                                     // Test pattern to verify all LEDs work
+uint8_t getLEDIndex(uint8_t row, uint8_t col);          // Convert grid to strip index
+bool getSwitchStateFromGrid(uint8_t row, uint8_t col);  // get the switch state based on row and col position
 
 #endif

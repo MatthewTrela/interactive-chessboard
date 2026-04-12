@@ -3,6 +3,7 @@
 #include <Adafruit_GFX.h>
 
 #include "global.h"
+#include "led.h"  // for getswitchstate method
 
 // Track previous values to detect changes
 static uint16_t lastDisplayedValues[NUM_EXPANDERS] = {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
@@ -65,64 +66,109 @@ void displayDebugMessage(const char* line1, const char* line2) {
     display->display();
 }
 
+// void updateDisplay() {
+//     if (display == nullptr) return;
+
+//     bool anyChanged = false;
+
+//     // Check if any expander value changed since last display update
+//     for (int i = 0; i < NUM_EXPANDERS; i++) {
+//         if (mcpValues[i] != lastDisplayedValues[i]) {
+//             anyChanged = true;
+//             lastDisplayedValues[i] = mcpValues[i];
+//         }
+//     }
+
+//     // Only redraw if changes occurred or first run
+//     if (!anyChanged && !firstRun) {
+//         return;
+//     }
+//     firstRun = false;
+
+//     display->clearDisplay();
+
+//     // ===== TITLE SECTION =====
+//     display->setTextSize(1);
+//     display->setTextColor(SSD1306_WHITE);
+//     display->setCursor(0, OLED_TITLE_Y);
+//     display->println("I/O Expander Status");
+//     display->drawLine(0, OLED_LINE_Y, SCREEN_WIDTH - 1, OLED_LINE_Y, SSD1306_WHITE);
+
+//     // ===== EXPANDER ROWS =====
+//     for (int i = 0; i < NUM_EXPANDERS; i++) {
+//         int y = OLED_FIRST_EXPANDER_Y + (i * OLED_EXPANDER_ROW_HEIGHT);
+//         bool highlight = (mcpValues[i] != mcpLastValues[i]);
+//         drawBinaryRow(y, i, mcpValues[i], highlight);
+//     }
+
+//     // ===== STATUS LINE =====
+//     display->setTextColor(SSD1306_WHITE);
+//     display->setCursor(0, OLED_STATUS_Y);
+
+//     // Count total LOW pins across all expanders
+//     int totalLowPins = 0;
+//     for (int i = 0; i < NUM_EXPANDERS; i++) {
+//         for (int pin = 0; pin < 16; pin++) {
+//             if (!((mcpValues[i] >> pin) & 1)) {
+//                 totalLowPins++;
+//             }
+//         }
+//     }
+
+//     display->print("LOW:");
+//     display->print(totalLowPins);
+//     display->print("/");
+//     display->print(NUM_EXPANDERS * 16);
+
+//     // Show interrupt status
+//     display->setCursor(80, OLED_STATUS_Y);
+//     display->print("INT:");
+//     display->print(interruptTriggered ? "Pend" : "OK");
+
+//     display->display();
+// }
+
 void updateDisplay() {
-    if (display == nullptr) return;
-
-    bool anyChanged = false;
-
-    // Check if any expander value changed since last display update
-    for (int i = 0; i < NUM_EXPANDERS; i++) {
-        if (mcpValues[i] != lastDisplayedValues[i]) {
-            anyChanged = true;
-            lastDisplayedValues[i] = mcpValues[i];
-        }
-    }
-
-    // Only redraw if changes occurred or first run
-    if (!anyChanged && !firstRun) {
-        return;
-    }
-    firstRun = false;
-
     display->clearDisplay();
 
-    // ===== TITLE SECTION =====
+    // Draw title
     display->setTextSize(1);
     display->setTextColor(SSD1306_WHITE);
-    display->setCursor(0, OLED_TITLE_Y);
-    display->println("I/O Expander Status");
-    display->drawLine(0, OLED_LINE_Y, SCREEN_WIDTH - 1, OLED_LINE_Y, SSD1306_WHITE);
+    display->setCursor(0, 0);
+    display->println("Board State");
+    display->drawLine(0, 9, 127, 9, SSD1306_WHITE);
 
-    // ===== EXPANDER ROWS =====
-    for (int i = 0; i < NUM_EXPANDERS; i++) {
-        int y = OLED_FIRST_EXPANDER_Y + (i * OLED_EXPANDER_ROW_HEIGHT);
-        bool highlight = (mcpValues[i] != mcpLastValues[i]);
-        drawBinaryRow(y, i, mcpValues[i], highlight);
-    }
+    // Draw 8x8 grid
+    // 128 wide, leave margins → 14px per square + 1px gap = 15px
+    const uint8_t CELL = 7;
+    const uint8_t GAP = 1;
+    const uint8_t CELL_WITH_GAP = CELL + GAP;
+    const uint8_t GRID_START_X = 4;
+    const uint8_t GRID_START_Y = 12;
 
-    // ===== STATUS LINE =====
-    display->setTextColor(SSD1306_WHITE);
-    display->setCursor(0, OLED_STATUS_Y);
+    for (uint8_t row = 0; row < 8; row++) {
+        for (uint8_t col = 0; col < 8; col++) {
+            bool pressed = getSwitchStateFromGrid(row, col);
 
-    // Count total LOW pins across all expanders
-    int totalLowPins = 0;
-    for (int i = 0; i < NUM_EXPANDERS; i++) {
-        for (int pin = 0; pin < 16; pin++) {
-            if (!((mcpValues[i] >> pin) & 1)) {
-                totalLowPins++;
+            uint8_t x = GRID_START_X + col * CELL_WITH_GAP;
+            uint8_t y = GRID_START_Y + (7 - row) * CELL_WITH_GAP;  // flip Y so row 0 = top
+
+            if (pressed) {
+                display->fillRect(x, y, CELL, CELL, SSD1306_WHITE);
+            } else {
+                display->drawRect(x, y, CELL, CELL, SSD1306_WHITE);
             }
         }
     }
 
-    display->print("LOW:");
-    display->print(totalLowPins);
-    display->print("/");
-    display->print(NUM_EXPANDERS * 16);
+    // Status bar at bottom
+    int pressedCount = 0;
+    for (int r = 0; r < 8; r++)
+        for (int c = 0; c < 8; c++)
+            if (getSwitchStateFromGrid(r, c)) pressedCount++;
 
-    // Show interrupt status
-    display->setCursor(80, OLED_STATUS_Y);
-    display->print("INT:");
-    display->print(interruptTriggered ? "Pend" : "OK");
+    display->setCursor(0, OLED_STATUS_Y);
+    display->printf("Pressed: %d/64", pressedCount);
 
     display->display();
 }

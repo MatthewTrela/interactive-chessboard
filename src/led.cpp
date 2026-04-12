@@ -7,7 +7,7 @@
 // ========== LED BUFFERS ==========
 static uint32_t ledBuffer[8][8];    // Desired states
 static uint32_t ledPhysical[8][8];  // Current physical states
-static bool ledDirty[8][8];     // Which LEDs need updating
+static bool ledDirty[8][8];         // Which LEDs need updating
 
 // ========== MAPPING TABLE ==========
 // [expander][pin] = {row, col}
@@ -64,6 +64,20 @@ uint8_t getLEDIndex(uint8_t row, uint8_t col) {
     } else {
         return row * 8 + (7 - col);  // odd row: R->L
     }
+}
+
+bool getSwitchStateFromGrid(uint8_t row, uint8_t col) {
+    if (row >= 8 || col >= 8) return false;
+
+    uint8_t expander = switchGrid[row][col].exp1;  // 1-based
+    uint8_t sw = switchGrid[row][col].pin1;        // 1..16
+
+    if (expander < 1 || expander > 4 || sw < 1 || sw > 16) return false;
+
+    uint8_t idx = swToIdx[sw];  // bit position (0-15)
+    if (idx == 0xFF) return false;
+
+    return !(mcpValues[expander - 1] & (1 << idx));  // active-low
 }
 
 // ========== INITIALIZATION ==========
@@ -164,7 +178,8 @@ void flushLEDBuffer() {
 
     if (anyUpdate) {
         strip->show();
-        lastFlushTime = millis();;
+        lastFlushTime = millis();
+        ;
 
         // Optional debug: print which LEDs updated
         // Serial.println("LED buffer flushed");

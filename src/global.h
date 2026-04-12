@@ -59,6 +59,7 @@ extern MCP23S17* expanders[4];
 extern uint16_t mcpValues[4];      // Current values for each expander
 extern uint16_t mcpLastValues[4];  // Previous values for debouncing
 extern volatile bool interruptTriggered;
+extern bool switchState[8][8];
 
 extern unsigned long lastInterruptTime;
 extern unsigned long lastDisplayUpdate;
