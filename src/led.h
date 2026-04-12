@@ -13,11 +13,11 @@
 
 // Function declarations
 void initLEDs();
-void setLED(uint8_t row, uint8_t col, bool state);
+void setLED(uint8_t row, uint8_t col, uint32_t color);
 void setLEDFromInput(uint8_t expander, uint8_t pin, bool state);
 void flushLEDBuffer();
 void clearAllLEDs();
-void setAllLEDs(bool state);
+void setAllLEDs(uint32_t color);
 
 // Mapping configuration
 void setLEDMapping(uint8_t expander, uint8_t pin, uint8_t row, uint8_t col);

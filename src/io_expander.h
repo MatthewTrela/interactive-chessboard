@@ -7,6 +7,7 @@ void initExpanders(bool polling);
 void checkAllExpandersForInterrupt();  // Sweep all devices
 uint16_t readWithDebounce(MCP23S17* expander);
 void IRAM_ATTR onExpanderInterrupt();
+void processStateChange(int i, uint16_t newValue);
 void poll();
 
 #endif
