@@ -95,7 +95,7 @@ void initLEDs() {
 
     Serial.println("LED strip initialized");
 
-    // testAllLEDs();
+    testAllLEDs();
 }
 
 // ========== LED CONTROL (BUFFERED) ==========
