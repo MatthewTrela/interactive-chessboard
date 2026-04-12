@@ -135,8 +135,6 @@ void updateDisplay() {
     display->setTextSize(1);
     display->setTextColor(SSD1306_WHITE);
     display->setCursor(0, 0);
-    display->println("Board State");
-    display->drawLine(0, 9, 127, 9, SSD1306_WHITE);
 
     // Draw 8x8 grid
     // 128 wide, leave margins → 14px per square + 1px gap = 15px
@@ -144,7 +142,7 @@ void updateDisplay() {
     const uint8_t GAP = 1;
     const uint8_t CELL_WITH_GAP = CELL + GAP;
     const uint8_t GRID_START_X = 4;
-    const uint8_t GRID_START_Y = 12;
+    const uint8_t GRID_START_Y = 0;
 
     for (uint8_t row = 0; row < 8; row++) {
         for (uint8_t col = 0; col < 8; col++) {
