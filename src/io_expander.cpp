@@ -1,5 +1,5 @@
 #include "io_expander.h"
-
+#include "led.h"
 #include "global.h"
 
 bool expanderOnline[4] = {false, false, false, false};
@@ -61,12 +61,9 @@ void checkAllExpandersForInterrupt() {
 
         uint16_t newValue = readWithDebounce(expanders[i]);
         if (newValue != mcpValues[i]) {
-            uint16_t changedPins = (mcpValues[i] ^ newValue);
-            mcpLastValues[i] = mcpValues[i];
-            mcpValues[i] = newValue;
+            processStateChange(i, newValue);
             anyChange = true;
-
-            Serial.printf("Expander %d changed: 0x%04X (mask 0x%04X)\n", i, newValue, changedPins);
+            Serial.printf("Expander %d changed: 0x%04X\n", i, newValue);
         }
     }
 
@@ -87,10 +84,39 @@ uint16_t readWithDebounce(MCP23S17* expander) {
     }
 }
 
+void processStateChange(int i, uint16_t newValue) {
+    uint16_t lastVals = mcpValues[i];
+    
+    mcpLastValues[i] = lastVals; 
+    mcpValues[i] = newValue;
+
+    for (int j = 0; j < 16; j++) {
+        uint16_t mask = 1 << j;
+        
+        bool isPressed = !(newValue & mask); 
+        bool wasPressed = !(lastVals & mask);
+
+        if (isPressed != wasPressed) {
+            setLEDFromInput(i, j, isPressed); 
+            
+            if (isPressed) {
+                Serial.print("ADDR: ");
+                Serial.print(i);
+                Serial.print(" BIT: ");
+                Serial.println(j);
+            }
+        }
+    }
+}
+
 void poll() {
     for (int i = 0; i < 4; i++) {
         if (!expanderOnline[i]) continue;
-        mcpLastValues[i] = mcpValues[i];
-        mcpValues[i] = expanders[i]->read16();
+        
+        uint16_t newValue = expanders[i]->read16();
+        
+        if (newValue != mcpValues[i]) {
+            processStateChange(i, newValue);
+        }
     }
 }

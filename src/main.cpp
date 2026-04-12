@@ -39,7 +39,7 @@ void loop() {
     // Periodically flush LED buffer to physical strip
     static unsigned long lastLEDFlush = 0;
     if (millis() - lastLEDFlush >= LED_FLUSH_INTERVAL_MS) {
-        // flushLEDBuffer();
+        flushLEDBuffer();
         lastLEDFlush = millis();
     }
 

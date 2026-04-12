@@ -5,8 +5,8 @@
 #include "global.h"
 
 // ========== LED BUFFERS ==========
-static bool ledBuffer[8][8];    // Desired states
-static bool ledPhysical[8][8];  // Current physical states
+static uint32_t ledBuffer[8][8];    // Desired states
+static uint32_t ledPhysical[8][8];  // Current physical states
 static bool ledDirty[8][8];     // Which LEDs need updating
 
 // ========== MAPPING TABLE ==========
@@ -22,6 +22,8 @@ struct InputRef {
     uint8_t exp1;
     uint8_t pin1;
 };
+
+const uint32_t base_color = 0x00FF00;
 
 static const uint8_t swToIdx[17] = {
     0xFF,
@@ -83,19 +85,18 @@ void initLEDs() {
 }
 
 // ========== LED CONTROL (BUFFERED) ==========
-void setLED(uint8_t row, uint8_t col, bool state) {
+// Note: Ensure your global ledBuffer is updated to: CRGB ledBuffer[8][8];
+
+void setLED(uint8_t row, uint8_t col, uint32_t color) {
     if (row >= 8 || col >= 8) {
         Serial.print("ERROR: Invalid LED position (row=");
         Serial.print(row);
         Serial.print(", col=");
-        Serial.print(col);
-        Serial.println(")");
+        Serial.println(col);
         return;
     }
-
-    // update if state changed
-    if (ledBuffer[row][col] != state) {
-        ledBuffer[row][col] = state;
+    if (ledBuffer[row][col] != color) {
+        ledBuffer[row][col] = color;
         ledDirty[row][col] = true;
     }
 }
@@ -123,7 +124,11 @@ void setLEDFromInput(uint8_t expander, uint8_t pin, bool state) {
     uint8_t col = pinMapping[expander][pin].col;
 
     // Set LED state
-    setLED(row, col, state);
+    if (state) {
+        setLED(row, col, base_color);
+    } else {
+        setLED(row, col, 0x000000);
+    }
 }
 
 // ========== BUFFER FLUSHING ==========
@@ -142,13 +147,13 @@ void flushLEDBuffer() {
         for (int col = 0; col < 8; col++) {
             if (ledDirty[row][col]) {
                 uint8_t index = getLEDIndex(row, col);
-                uint32_t color = ledBuffer[row][col] ? 0xFFFFFF : 0x000000;  // White or off
+                uint32_t color = ledBuffer[row][col];
 
                 // Update physical strip
                 strip->setPixelColor(index, color);
 
                 // Update physical state buffer
-                ledPhysical[row][col] = ledBuffer[row][col];
+                ledPhysical[row][col] = color;
 
                 // Clear dirty flag
                 ledDirty[row][col] = false;
@@ -159,8 +164,7 @@ void flushLEDBuffer() {
 
     if (anyUpdate) {
         strip->show();
-        now = millis();
-        lastFlushTime = now;
+        lastFlushTime = millis();;
 
         // Optional debug: print which LEDs updated
         // Serial.println("LED buffer flushed");
@@ -171,15 +175,15 @@ void flushLEDBuffer() {
 void clearAllLEDs() {
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
-            setLED(row, col, LED_OFF);
+            setLED(row, col, 0x000000);
         }
     }
 }
 
-void setAllLEDs(bool state) {
+void setAllLEDs(uint32_t color) {
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
-            setLED(row, col, state);
+            setLED(row, col, color);
         }
     }
 }
@@ -242,16 +246,16 @@ void testAllLEDs() {
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
             clearAllLEDs();
-            setLED(row, col, LED_ON);
+            setLED(row, col, base_color);
             flushLEDBuffer();
             delay(15);
         }
     }
 
     // Test pattern: all on
-    setAllLEDs(LED_ON);
+    setAllLEDs(base_color);
     flushLEDBuffer();
-    delay(1000);
+    delay(2000);
 
     // Test pattern: all off
     clearAllLEDs();
