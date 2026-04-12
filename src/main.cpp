@@ -15,6 +15,9 @@ void setup() {
     initLEDs();
     initExpanders(false);
 
+    // set initial led state
+    syncLEDsFromInputState();
+
     delay(1500);
 }
 

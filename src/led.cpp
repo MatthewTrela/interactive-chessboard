@@ -145,6 +145,24 @@ void setLEDFromInput(uint8_t expander, uint8_t pin, bool state) {
     }
 }
 
+void syncLEDsFromInputState() {
+    Serial.println("Syncing LEDs from current input state...");
+
+    for (int i = 0; i < NUM_EXPANDERS; i++) {
+        uint16_t value = mcpValues[i];
+
+        for (int pin = 0; pin < 16; pin++) {
+            if (pinMapping[i][pin].valid) {
+                bool isPressed = !(value & (1 << pin));
+                setLEDFromInput(i, pin, isPressed);
+            }
+        }
+    }
+
+    flushLEDBuffer();
+    Serial.println("LED sync complete");
+}
+
 // ========== BUFFER FLUSHING ==========
 void flushLEDBuffer() {
     unsigned long now = millis();
