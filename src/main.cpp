@@ -1,7 +1,12 @@
 #include "global.h"
-#include "io_expander.h"
-#include "led.h"
-#include "oled.h"
+#include "IO/io_expander.h"
+#include "IO/led.h"
+#include "IO/oled.h"
+#include "Chess/chess.hpp"
+
+using namespace Chess;
+
+Board board;
 
 void setup() {
     Serial.begin(115200);
