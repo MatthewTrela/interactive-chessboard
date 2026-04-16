@@ -27,6 +27,14 @@
 
 #define MCP_INT_PIN 1
 
+// Encoder pins
+#define ENCODER_P1_A 6
+#define ENCODER_P1_B 7
+#define ENCODER_P1_BUTTON 15
+#define ENCODER_P2_A 40
+#define ENCODER_P2_B 41
+#define ENCODER_P2_BUTTON 42
+
 #define MCP_DEBOUNCE_DELAY_MS 15
 
 // OLED
