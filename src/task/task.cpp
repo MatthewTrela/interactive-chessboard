@@ -1,5 +1,4 @@
 #include "task.h"
-#include "interrupt.h"
 #include "global.h"
 
 TaskHandle_t EncoderTaskHandle = NULL;
@@ -46,5 +45,4 @@ void initTasks() {
     // TODO: Create tasks and assign priorities
     xTaskCreatePinnedToCore(EngineTask, "Engine", 8192, NULL, 1, &EngineTaskHandle, 0);
     
-    initInterrupts();
 }
