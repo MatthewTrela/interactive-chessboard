@@ -1,9 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
-#include <string>
 #include <optional>
+#include <string>
+#include <vector>
+
 #include "esp_attr.h"
 
 namespace Chess {
@@ -11,40 +12,84 @@ namespace Chess {
 using Bitboard = uint64_t;
 
 enum Square : int {
-    SQ_A1 = 0, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
-    SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
-    SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
-    SQ_A4, SQ_B4, SQ_C4, SQ_D4, SQ_E4, SQ_F4, SQ_G4, SQ_H4,
-    SQ_A5, SQ_B5, SQ_C5, SQ_D5, SQ_E5, SQ_F5, SQ_G5, SQ_H5,
-    SQ_A6, SQ_B6, SQ_C6, SQ_D6, SQ_E6, SQ_F6, SQ_G6, SQ_H6,
-    SQ_A7, SQ_B7, SQ_C7, SQ_D7, SQ_E7, SQ_F7, SQ_G7, SQ_H7,
-    SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
+    SQ_A1 = 0,
+    SQ_B1,
+    SQ_C1,
+    SQ_D1,
+    SQ_E1,
+    SQ_F1,
+    SQ_G1,
+    SQ_H1,
+    SQ_A2,
+    SQ_B2,
+    SQ_C2,
+    SQ_D2,
+    SQ_E2,
+    SQ_F2,
+    SQ_G2,
+    SQ_H2,
+    SQ_A3,
+    SQ_B3,
+    SQ_C3,
+    SQ_D3,
+    SQ_E3,
+    SQ_F3,
+    SQ_G3,
+    SQ_H3,
+    SQ_A4,
+    SQ_B4,
+    SQ_C4,
+    SQ_D4,
+    SQ_E4,
+    SQ_F4,
+    SQ_G4,
+    SQ_H4,
+    SQ_A5,
+    SQ_B5,
+    SQ_C5,
+    SQ_D5,
+    SQ_E5,
+    SQ_F5,
+    SQ_G5,
+    SQ_H5,
+    SQ_A6,
+    SQ_B6,
+    SQ_C6,
+    SQ_D6,
+    SQ_E6,
+    SQ_F6,
+    SQ_G6,
+    SQ_H6,
+    SQ_A7,
+    SQ_B7,
+    SQ_C7,
+    SQ_D7,
+    SQ_E7,
+    SQ_F7,
+    SQ_G7,
+    SQ_H7,
+    SQ_A8,
+    SQ_B8,
+    SQ_C8,
+    SQ_D8,
+    SQ_E8,
+    SQ_F8,
+    SQ_G8,
+    SQ_H8,
     SQ_NONE = 64
 };
 
-enum class ChessColor : int {
-    White = 0,
-    Black = 1,
-    None  = 2
-};
+enum class ChessColor : int { White = 0, Black = 1, None = 2 };
 
-enum class PieceType : int {
-    Pawn = 0, Knight, Bishop, Rook, Queen, King, None
-};
+enum class PieceType : int { Pawn = 0, Knight, Bishop, Rook, Queen, King, None };
 
 // Masks used to revoke castling rights when a piece moves to/from a corner or
 // king square. Indexed by square; ANDed against the current castling rights
 // after every move. Bits: 0=WK-side, 1=WQ-side, 2=BK-side, 3=BQ-side.
-const uint8_t castlingRightsMask[64] = {
-    13, 15, 15, 15, 12, 15, 15, 14,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-     7, 15, 15, 15,  3, 15, 15, 11
-};
+const uint8_t castlingRightsMask[64] = {13, 15, 15, 15, 12, 15, 15, 14, 15, 15, 15, 15, 15, 15, 15, 15,
+                                        15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+                                        15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+                                        15, 15, 15, 15, 15, 15, 15, 15, 7,  15, 15, 15, 3,  15, 15, 11};
 
 // Bits 0-5:   From square (0-63)
 // Bits 6-11:  To square (0-63)
@@ -68,7 +113,7 @@ code	promotion	capture	special 1	special 0	kind of move
 
 /// Encodes a chess move in a single 16-bit integer for fast copying and storage.
 class Move {
-public:
+   public:
     Move() : data(0) {}
     Move(uint16_t d) : data(d) {}
 
@@ -76,28 +121,30 @@ public:
     /// @param to     The square the piece is moving to.
     /// @param flags  Move-type flags (bits 12-15 of the encoding); defaults to
     ///               quiet move (0). See the flag table above for valid values.
-    Move(Square from, Square to, uint16_t flags = 0) { data = (from & 0x3F) | ((to & 0x3F) << 6) | ((flags & 0x0F) << 12);}
+    Move(Square from, Square to, uint16_t flags = 0) {
+        data = (from & 0x3F) | ((to & 0x3F) << 6) | ((flags & 0x0F) << 12);
+    }
 
     Square getFrom() const { return static_cast<Square>(data & 0x3F); }
-    Square getTo() const   { return static_cast<Square>((data >> 6) & 0x3F); }
+    Square getTo() const { return static_cast<Square>((data >> 6) & 0x3F); }
     uint16_t getFlags() const { return (data >> 12) & 0x0F; }
-    
+
     /// @return True if the move flag has the capture bit set (bit 2 of flags).
-    bool isCapture() const {return (getFlags() & 4) != 0; }
+    bool isCapture() const { return (getFlags() & 4) != 0; }
 
     /// @return True if the move flag has the promotion bit set (bit 3 of flags).
-    bool isPromotion() const {return (getFlags() & 8) != 0; }
-    
+    bool isPromotion() const { return (getFlags() & 8) != 0; }
+
     bool operator==(const Move& other) const { return data == other.data; }
 
-private:
+   private:
     uint16_t data;
 };
 
 /// Fixed-capacity move list backed by a plain array to avoid heap allocation
 /// in performance-critical move generation paths.
 class MoveList {
-public:
+   public:
     void push_back(Move move) { moves[count++] = move; }
     size_t size() const { return count; }
     Move& operator[](size_t index) { return moves[index]; }
@@ -106,7 +153,7 @@ public:
     Move* begin() { return moves; }
     Move* end() { return moves + count; }
 
-private:
+   private:
     Move moves[256];
     size_t count = 0;
 };
@@ -115,7 +162,7 @@ private:
 /// generation. Maintains piece/color/occupancy bitboards, a mailbox for O(1)
 /// piece lookup by square, and a StateInfo stack for cheap unmake-move.
 class Board {
-public:
+   public:
     Board() { reset(); }
     ~Board() = default;
 
@@ -160,11 +207,13 @@ public:
 
     /// @return True if the side to move has no legal moves but is not in check.
     bool isStalemate() const;
-    
+
     /// Returns the type of piece occupying a square, ignoring color.
     /// @param sq  The square to query.
     /// @return    The PieceType on that square, or PieceType::None if empty.
-    PieceType  pieceAt(Square sq) const { return (mailbox[sq] < 0) ? PieceType::None : static_cast<PieceType>(mailbox[sq] % 6);}
+    PieceType pieceAt(Square sq) const {
+        return (mailbox[sq] < 0) ? PieceType::None : static_cast<PieceType>(mailbox[sq] % 6);
+    }
 
     /// Returns the color of the piece occupying a square.
     /// @param sq  The square to query.
@@ -181,18 +230,21 @@ public:
     /// @return       The total node count at that depth.
     uint64_t perft(int depth);
 
-private:
+    /// @return         Bitboard occupancy private var
+    Bitboard getOccupancy();
+
+   private:
     static constexpr int MAX_GAME_PLIES = 256;
 
-    Bitboard pieces[2][6]; // pieces[color][PieceType] — one bitboard per piece type per color
-    Bitboard colors[2];    // Union of all piece bitboards for each color
-    Bitboard occupancy;    // Union of colors[0] and colors[1]; all occupied squares
-    int8_t mailbox[64];    // Encoded piece+color per square; -1 = empty
+    Bitboard pieces[2][6];  // pieces[color][PieceType] — one bitboard per piece type per color
+    Bitboard colors[2];     // Union of all piece bitboards for each color
+    Bitboard occupancy;     // Union of colors[0] and colors[1]; all occupied squares
+    int8_t mailbox[64];     // Encoded piece+color per square; -1 = empty
 
     ChessColor sideToMove;
-    Square enPassantSquare; 
-    uint8_t castlingRights; 
-    
+    Square enPassantSquare;
+    uint8_t castlingRights;
+
     int halfMoveClock;
     int fullMoveNumber;
 
@@ -205,7 +257,7 @@ private:
         PieceType capturedPiece;
         uint64_t zobristKey;
     };
-    
+
     StateInfo stateHistory[MAX_GAME_PLIES];
     int historyIndex = 0;
 
@@ -229,75 +281,66 @@ private:
 };
 
 namespace BitUtils {
-    inline void setBit(Bitboard& bb, Square sq) { bb |= (1ULL << sq); }
-    inline void clearBit(Bitboard& bb, Square sq) { bb &= ~(1ULL << sq); }
-    inline bool readBit(Bitboard bb, Square sq) { return (bb & (1ULL << sq)) != 0; }
-    
-    /// Removes and returns the index of the lowest set bit (LSB).
-    /// Equivalent to trailing-zero count; uses a hardware instruction when
-    /// available. Modifies the bitboard in place.
-    /// @param bb  The bitboard to pop from; must be non-zero.
-    /// @return    The square index of the former LSB.
-    inline Square popLSB(Bitboard& bb) {
-        Square sq = static_cast<Square>(__builtin_ctzll(bb)); 
-        bb &= (bb - 1); 
-        return sq; 
-    }
+inline void setBit(Bitboard& bb, Square sq) { bb |= (1ULL << sq); }
+inline void clearBit(Bitboard& bb, Square sq) { bb &= ~(1ULL << sq); }
+inline bool readBit(Bitboard bb, Square sq) { return (bb & (1ULL << sq)) != 0; }
 
-    /// @param bb  A non-zero bitboard.
-    /// @return    The square index of the lowest set bit without modifying bb.
-    inline Square getLSB(Bitboard bb) {
-        return static_cast<Square>(__builtin_ctzll(bb));
-    }
-
-    /// @param bb  A non-zero bitboard.
-    /// @return    The square index of the highest set bit.
-    inline Square getMSB(Bitboard bb) {
-        return static_cast<Square>(63 - __builtin_clzll(bb)); 
-    }
-    
-    /// @param bb  Any bitboard.
-    /// @return    The number of set bits (population count).
-    inline int countBits(Bitboard bb) {
-        return __builtin_popcountll(bb);
-    }
+/// Removes and returns the index of the lowest set bit (LSB).
+/// Equivalent to trailing-zero count; uses a hardware instruction when
+/// available. Modifies the bitboard in place.
+/// @param bb  The bitboard to pop from; must be non-zero.
+/// @return    The square index of the former LSB.
+inline Square popLSB(Bitboard& bb) {
+    Square sq = static_cast<Square>(__builtin_ctzll(bb));
+    bb &= (bb - 1);
+    return sq;
 }
+
+/// @param bb  A non-zero bitboard.
+/// @return    The square index of the lowest set bit without modifying bb.
+inline Square getLSB(Bitboard bb) { return static_cast<Square>(__builtin_ctzll(bb)); }
+
+/// @param bb  A non-zero bitboard.
+/// @return    The square index of the highest set bit.
+inline Square getMSB(Bitboard bb) { return static_cast<Square>(63 - __builtin_clzll(bb)); }
+
+/// @param bb  Any bitboard.
+/// @return    The number of set bits (population count).
+inline int countBits(Bitboard bb) { return __builtin_popcountll(bb); }
+}  // namespace BitUtils
 
 namespace Attacks {
-    /// Pre-computes all attack tables (pawns, knights, kings, sliding-piece rays).
-    /// Must be called once at engine startup before any move generation.
-    void init();
+/// Pre-computes all attack tables (pawns, knights, kings, sliding-piece rays).
+/// Must be called once at engine startup before any move generation.
+void init();
 
-    extern Bitboard pawnAttacks[2][64];  // pawnAttacks[color][square]
-    extern Bitboard knightAttacks[64];
-    extern Bitboard kingAttacks[64];
+extern Bitboard pawnAttacks[2][64];  // pawnAttacks[color][square]
+extern Bitboard knightAttacks[64];
+extern Bitboard kingAttacks[64];
 
-    enum Direction {
-        NORTH = 0, SOUTH, EAST, WEST,
-        NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST
-    };
+enum Direction { NORTH = 0, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST };
 
-    extern Bitboard rays[8][64]; // rays[Direction][square] — full ray bitboard
+extern Bitboard rays[8][64];  // rays[Direction][square] — full ray bitboard
 
-    /// Returns the set of squares a bishop on sq can attack given the current
-    /// occupancy, using classical ray-casting with o^(o-2r) or a magic table.
-    /// @param sq         The bishop's square.
-    /// @param occupancy  Bitboard of all occupied squares (both colors).
-    /// @return           Bitboard of reachable/attackable squares.
-    IRAM_ATTR Bitboard getBishopAttacks(Square sq, Bitboard occupancy);
+/// Returns the set of squares a bishop on sq can attack given the current
+/// occupancy, using classical ray-casting with o^(o-2r) or a magic table.
+/// @param sq         The bishop's square.
+/// @param occupancy  Bitboard of all occupied squares (both colors).
+/// @return           Bitboard of reachable/attackable squares.
+IRAM_ATTR Bitboard getBishopAttacks(Square sq, Bitboard occupancy);
 
-    /// Returns the set of squares a rook on sq can attack given the current
-    /// occupancy.
-    /// @param sq         The rook's square.
-    /// @param occupancy  Bitboard of all occupied squares (both colors).
-    /// @return           Bitboard of reachable/attackable squares.
-    IRAM_ATTR Bitboard getRookAttacks(Square sq, Bitboard occupancy);
+/// Returns the set of squares a rook on sq can attack given the current
+/// occupancy.
+/// @param sq         The rook's square.
+/// @param occupancy  Bitboard of all occupied squares (both colors).
+/// @return           Bitboard of reachable/attackable squares.
+IRAM_ATTR Bitboard getRookAttacks(Square sq, Bitboard occupancy);
 
-    /// Returns bishop attacks OR rook attacks from sq — i.e. all queen moves.
-    /// @param sq         The queen's square.
-    /// @param occupancy  Bitboard of all occupied squares (both colors).
-    /// @return           Bitboard of reachable/attackable squares.
-    Bitboard getQueenAttacks(Square sq, Bitboard occupancy);
-}
+/// Returns bishop attacks OR rook attacks from sq — i.e. all queen moves.
+/// @param sq         The queen's square.
+/// @param occupancy  Bitboard of all occupied squares (both colors).
+/// @return           Bitboard of reachable/attackable squares.
+Bitboard getQueenAttacks(Square sq, Bitboard occupancy);
+}  // namespace Attacks
 
-} // namespace Chess
+}  // namespace Chess
