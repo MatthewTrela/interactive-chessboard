@@ -2,22 +2,17 @@
 
 #include <SPI.h>
 #include <Wire.h>
+
 #include "IO/display_manager.h"
 
-// ========== OBJECT DEFINITIONS ==========
 Adafruit_NeoPixel* strip = nullptr;
 DisplayManager* uiManager = nullptr;
-
-// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-// Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
-
 MCP23S17* expanders[NUM_EXPANDERS] = {nullptr, nullptr, nullptr, nullptr};
 
-// ========== VARIABLE DEFINITIONS ==========
-uint16_t mcpValues[NUM_EXPANDERS] = {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};  // Start with all HIGH
-uint16_t mcpLastValues[NUM_EXPANDERS] = {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
-volatile bool interruptTriggered = false;
+ExpanderState expanderState = {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
+ExpanderState expanderLastState = {0, 0, 0, 0};
 
+volatile bool interruptTriggered = false;
 unsigned long lastInterruptTime = 0;
 unsigned long lastDisplayUpdate = 0;
 

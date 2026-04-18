@@ -6,6 +6,7 @@
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 #include <MCP23S17.h>
+
 class DisplayManager;
 
 // I2C Pins
@@ -62,15 +63,18 @@ class DisplayManager;
 // ========== GLOBAL OBJECTS (Declared as extern) ==========
 extern DisplayManager* uiManager;
 extern Adafruit_NeoPixel* strip;
-
-// MCP23S17 objects
 extern MCP23S17* expanders[4];
 
+// expander state
+typedef union {
+    uint16_t expander[4];
+    uint64_t raw;
+} ExpanderState;
+
 // ========== GLOBAL VARIABLES ==========
-extern uint16_t mcpValues[4];      // Current values for each expander
-extern uint16_t mcpLastValues[4];  // Previous values for debouncing
+extern ExpanderState expanderState;
+extern ExpanderState expanderLastState;
 extern volatile bool interruptTriggered;
-extern bool switchState[8][8];
 
 extern unsigned long lastInterruptTime;
 extern unsigned long lastDisplayUpdate;
