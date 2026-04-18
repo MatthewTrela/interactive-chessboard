@@ -16,8 +16,8 @@ class DisplayManager;
 #define P2_SCL 2
 
 // SPI Pins
-#define SPI_MOSI 11
-#define SPI_MISO 13
+#define SPI_MOSI 13
+#define SPI_MISO 11
 #define SPI_SCK 12
 #define SPI_CS_MCP 10  // Shared CS for all MCP23S17
 
