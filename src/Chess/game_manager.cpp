@@ -103,6 +103,8 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
     Chess::ChessColor pieceColor = currentBoard.colorAt(sq);
     Chess::PieceType pieceType = currentBoard.pieceAt(sq);
 
+    uiManager->showPickedUpPiece(pieceType, sideToMove);
+
     bool isOwnPiece = (pieceColor == sideToMove);
     bool isOpponentPiece = (pieceType != Chess::PieceType::None) && !isOwnPiece;
 
