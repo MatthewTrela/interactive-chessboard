@@ -13,8 +13,11 @@ Board board;
 
 void setup() {
     Serial.begin(115200);
-    delay(1000);
 
+    while (!Serial);
+    // delay(3000);
+
+    Serial.println("Hello from ESP32-S3!");
     // Initialize all global objects
     initGlobals();
     game.init();

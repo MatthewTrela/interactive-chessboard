@@ -10,7 +10,7 @@ TaskHandle_t EngineTaskHandle = NULL;
 void gameLoopTask(void *pvParameters) {
     for(;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        uint64_t newOccupancy = checkAllExpandersForInterrupt();
+        uint64_t newOccupancy = readBoardBitmap();
         game.updateBoard(newOccupancy);
     }
 }
