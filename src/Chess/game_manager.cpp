@@ -4,8 +4,8 @@ GameManager game;
 
 GameManager::GameManager() {
     currentState = SystemState::MAIN_MENU;
-    currentBoard = Chess::Board();
-    hasPickedUpPiece = false;
+    resetMovePhase();
+    sensorOccupancy = 0;
 }
 
 void GameManager::init() {
@@ -26,149 +26,230 @@ void GameManager::init() {
     players[0] = PlayerSettings{false, false};
     players[1] = PlayerSettings{false, false};
 
-    pickupSquare = Chess::SQ_NONE;
-    pickedUpPiece = Chess::PieceType::None;
-    pickedUpColor = Chess::ChessColor::None;
+    currentState = SystemState::PLAYING;
+    resetMovePhase();
 }
 
 void GameManager::updateBoard(uint64_t newBoard) {
     // check if piece picked up or put down
-    Chess::Bitboard prevOccupied = sensorOccupancy;
-    Chess::Bitboard diffBoard = prevOccupied ^ newBoard;
-    int numChanged = Chess::BitUtils::countBits(diffBoard);
+    Chess::Bitboard diffBoard = sensorOccupancy ^ static_cast<Chess::Bitboard>(newBoard);
+    if (diffBoard == 0) return;
 
-    if (numChanged == 0) return;
-
-    if (numChanged > 1) {
+    if (Chess::BitUtils::countBits(diffBoard) != 1) {
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
 
-    Chess::Square changedSquare = Chess::BitUtils::getLSB(diffBoard);
-    bool wasOccupied = Chess::BitUtils::readBit(prevOccupied, changedSquare);
-    bool nowOccupied = Chess::BitUtils::readBit(newBoard, changedSquare);
+    Chess::Square changedSq = Chess::BitUtils::getLSB(diffBoard);
+    bool wasOccupied = Chess::BitUtils::readBit(sensorOccupancy, changedSq);
+    bool nowOccupied = Chess::BitUtils::readBit(static_cast<Chess::Bitboard>(newBoard), changedSq);
 
-    // update sensor tracking
-    updateSensorOccupancy(changedSquare, nowOccupied);
+    updateSensorOccupancy(changedSq, nowOccupied);
 
     if (wasOccupied && !nowOccupied) {
         // Piece picked up
-        handlePiecePickup(changedSquare);
-    } else if (!wasOccupied && nowOccupied) {
-        // Piece placed
-        handlePiecePlacement(changedSquare);
-    }
-}
-
-void GameManager::updateSensorOccupancy(Chess::Square square, bool occupied) {
-    if (occupied) {
-        Chess::BitUtils::setBit(sensorOccupancy, square);
+        handlePiecePickup(changedSq);
     } else {
-        Chess::BitUtils::clearBit(sensorOccupancy, square);
+        handlePiecePlacement(changedSq);
     }
 }
 
-void GameManager::handlePiecePickup(Chess::Square square) {
-    if (hasPickedUpPiece) {
-        // already has a piece picked up
-        // IMPORTANT: Edit for castling and captures
-        currentState = SystemState::ERROR_RECOVERY;
-        return;
-    }
-
-    // validate move
-    Chess::PieceType piece = currentBoard.pieceAt(square);
-    Chess::ChessColor color = currentBoard.colorAt(square);
-
-    if (piece == Chess::PieceType::None) {
-        // no piece here, sensor mismatch
-        currentState = SystemState::ERROR_RECOVERY;
-        return;
-    }
-
-    if (color != currentBoard.getSideToMove()) {
-        // must be right color move
-        currentState = SystemState::ERROR_RECOVERY;
-        return;
-    }
-
-    // Store pickup
-    pickupSquare = square;
-    pickedUpPiece = currentBoard.pieceAt(square);
-    pickedUpColor = currentBoard.colorAt(square);
-    hasPickedUpPiece = true;
-
-    if (players[currentBoard.getSideToMove() == Chess::ChessColor::White ? 0 : 1].showLegalMoves) {
-        // TODO: Highlight legal moves for piece if showLegalMoves enabled
+// sensor helper
+void GameManager::updateSensorOccupancy(Chess::Square sq, bool occupied) {
+    if (occupied) {
+        Chess::BitUtils::setBit(sensorOccupancy, sq);
+    } else {
+        Chess::BitUtils::clearBit(sensorOccupancy, sq);
     }
 }
 
-void GameManager::handlePiecePlacement(Chess::Square square) {
-    if (!hasPickedUpPiece) {
-        // no piece picked up
+// piece pickup
+// sequence:
+// Normal move: lift own piece
+// Capture:     life own piece
+//              lift opponent piece
+
+void GameManager::handlePiecePickup(Chess::Square sq) {
+    Chess::ChessColor sideToMove = currentBoard.getSideToMove();
+    Chess::ChessColor pieceColor = currentBoard.colorAt(sq);
+    Chess::PieceType pieceType = currentBoard.pieceAt(sq);
+
+    if (pieceType == Chess::PieceType::None) {
+        // Sensor fired on an empty square
+        currentState = SystemState::ERROR_RECOVERY;
+        return;
+    }
+
+    bool isOwnPiece = (pieceColor == sideToMove);
+    bool isOpponentPiece = !isOwnPiece;
+
+    // IDLE: only own piece may initiate a move
+    if (movePhase == MovePhase::IDLE) {
+        if (isOpponentPiece) {
+            // Touching the opponent's piece before your own is illegal.
+            currentState = SystemState::ERROR_RECOVERY;
+            return;
+        }
+
+        // Record attacker and advance phase.
+        attackingSquare = sq;
+        movePhase = MovePhase::ATTACKER_LIFTED;
+
+        int playerIndex = (sideToMove == Chess::ChessColor::White) ? 0 : 1;
+        if (players[playerIndex].showLegalMoves) {
+            // TODO: highlight legal destination squares for attackingSquare
+        }
+        return;
+    }
+
+    // ATTACKER_LIFTED: only valid second pickup is capture target
+    if (movePhase == MovePhase::ATTACKER_LIFTED) {
+        if (isOwnPiece) {
+            // Player lifted a second friendly piece
+            currentState = SystemState::ERROR_RECOVERY;
+            return;
+        }
+
+        // The opponent piece being lifted must be a legal capture target for the piece already held
+        Chess::Move captureMove;
+        if (!findLegalMove(attackingSquare, sq, captureMove)) {
+            // square is not a valid capture destination
+            currentState = SystemState::ERROR_RECOVERY;
+            return;
+        }
+
+        // Store everything needed to complete the capture on placement.
+        capturedSquare = sq;
+        pendingMove = captureMove;
+        movePhase = MovePhase::CAPTURED_REMOVED;
+        return;
+    }
+
+    // CAPTURED_REMOVED: no further pickups are expected
+    // (The attacker is in hand and the captured piece has been removed.)
+    currentState = SystemState::ERROR_RECOVERY;
+}
+
+// Piece placement
+// Expected sequence:
+// Cancel:          place own piece back to origin square
+// Normal move:     place own piece on legal square
+// Capture:         place own piece on capturedSquare
+void GameManager::handlePiecePlacement(Chess::Square sq) {
+    // nothing in hand
+    if (movePhase == MovePhase::IDLE) {
+        // A piece appeared on the board without us tracking a pickup.
+        // This can happen if a captured piece is returned to the board off-turn.
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
 
     // cancel move: piece picked up and placed back down same place
-    if (square == pickupSquare) {
-        hasPickedUpPiece = false;
-        pickupSquare = Chess::SQ_NONE;
-        return;
-    }
-
-    // try to match legal move
-    Chess::MoveList moves;
-    currentBoard.generateLegalMoves(moves);
-
-    Chess::Move matchingMove;
-    bool foundLegalMove = false;
-
-    // check for exact match
-    for (size_t i = 0; i < moves.size(); i++) {
-        Chess::Move mv = moves[i];
-        if (mv.getFrom() == pickupSquare && mv.getTo() == square) {
-            matchingMove = mv;
-            foundLegalMove = true;
-            break;
+    if (sq == attackingSquare) {
+        // Player changed their mind and put the piece back.
+        // If we already removed a captured piece this is invalid
+        if (movePhase == MovePhase::CAPTURED_REMOVED) {
+            currentState = SystemState::ERROR_RECOVERY;
+            return;
         }
+        resetMovePhase();
+        return;
     }
+    // ATTACKER_LIFTED: resolve destination for a normal (non-capture) move
+    if (movePhase == MovePhase::ATTACKER_LIFTED) {
+        Chess::Move move;
+        if (!findLegalMove(attackingSquare, sq, move)) {
+            // Not a legal destination
+            currentState = SystemState::ERROR_RECOVERY;
+            return;
+        }
 
-    if (!foundLegalMove) {
-        // could be castling
-        hasPickedUpPiece = false;
+        if (move.isCapture()) {
+            // Player placed on an occupied square without first removing the
+            // opponent piece.  This shouldn't happen with physical switches.
+            currentState = SystemState::ERROR_RECOVERY;
+            return;
+        }
+
+        executeMove(move);
         return;
     }
 
-    // make move on board
-    bool success = currentBoard.makeMove(matchingMove);
+    // CAPTURED_REMOVED: attacker must land on the captured square
+    if (movePhase == MovePhase::CAPTURED_REMOVED) {
+        if (sq != capturedSquare) {
+            // The attacker was placed somewhere other than the capture square
+            currentState = SystemState::ERROR_RECOVERY;
+            return;
+        }
+
+        // pendingMove was already validated in handlePiecePickup.
+        executeMove(pendingMove);
+        return;
+    }
+}
+
+// move execution
+void GameManager::executeMove(Chess::Move move) {
+    bool success = currentBoard.makeMove(move);
     if (!success) {
         currentState = SystemState::ERROR_RECOVERY;
-        hasPickedUpPiece = false;
+        resetMovePhase();
         return;
     }
 
-    // update game state
+    resetMovePhase();
     checkGameEndConditions();
+}
 
-    // reset pickup state
-    hasPickedUpPiece = false;
-    pickupSquare = Chess::SQ_NONE;
+//
+// helpers
+//
+
+void GameManager::resetMovePhase() {
+    movePhase = MovePhase::IDLE;
+    attackingSquare = Chess::SQ_NONE;
+    capturedSquare = Chess::SQ_NONE;
+    pendingMove = Chess::Move();
+}
+
+bool GameManager::findLegalMove(Chess::Square from, Chess::Square to, Chess::Move& out) const {
+    Chess::MoveList moves;
+    const_cast<Chess::Board&>(currentBoard).generateLegalMoves(moves);
+
+    for (size_t i = 0; i < moves.size(); ++i) {
+        if (moves[i].getFrom() == from && moves[i].getTo() == to) {
+            out = moves[i];
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GameManager::squareIsCaptureTarget(Chess::Square targetSq) const {
+    Chess::MoveList moves;
+    const_cast<Chess::Board&>(currentBoard).generateLegalMoves(moves);
+
+    for (size_t i = 0; i < moves.size(); ++i) {
+        if (moves[i].isCapture() && moves[i].getTo() == targetSq) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void GameManager::checkGameEndConditions() {
-    // TODO: game over stuff
     if (currentBoard.isCheckmate()) {
-        // Game over - checkmate
-        // Could transition to game over state
         currentState = SystemState::GAME_OVER;
-    } else if (currentBoard.isStalemate()) {
-        // Game over - stalemate
+        return;
+    }
+    if (currentBoard.isStalemate()) {
         currentState = SystemState::GAME_OVER;
+        return;
     }
 
-    // show best move if enabled
-    int playerIndex = currentBoard.getSideToMove() == Chess::ChessColor::White ? 0 : 1;
+    // Show best move hint for the side now to move, if enabled.
+    int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
     if (players[playerIndex].showBestMove) {
         // TODO: show best move
     }
