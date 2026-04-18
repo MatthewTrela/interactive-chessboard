@@ -11,48 +11,90 @@ struct PlayerSettings {
     bool showLegalMoves;
 };
 
+/// Tracks what physical step of a move sequence the player is currently in.
+///
+/// Normal move:
+///   IDLE → ATTACKER_LIFTED → (place on destination) → IDLE
+///
+/// Capture move (physical sequence: pick up attacker, remove captured piece,
+/// place attacker on destination square):
+///   IDLE → ATTACKER_LIFTED → CAPTURED_REMOVED → (place on destination) → IDLE
+///
+/// The player must always lift their own piece first. Once an attacker is
+/// lifted, lifting the opponent piece on the target square advances the phase
+/// to CAPTURED_REMOVED rather than going to error.
+enum class MovePhase {
+    IDLE,                  // No piece in hand; waiting for the moving side to act.
+    ATTACKER_LIFTED,       // own piece lifted
+    CAPTURED_REMOVED,      // opponent piece lifted, attacker in hand: normal captures and en passant
+    CASTLING_BOTH_LIFTED,  // King and correct rook both in hand
+    CASTLING_ONE_PLACED,   // one castling piece placed
+};
+
 class GameManager {
+   public:
+    GameManager();
+
+    // reset to starting position
+    void init();
+
+    /// Called whenever a hall-effect / reed switch changes state.
+    /// @param newBoard  64-bit occupancy bitmask reflecting the current
+    ///                  physical board (1 = piece present, LSB = A1).
+    void updateBoard(uint64_t newBoard);
+
+    PlayerSettings& getSettings(uint8_t player);  // player: 0 or 1
+
+    void setSettings(uint8_t playerNum, bool showBestMove, bool showLegalMoves);
+
+    Chess::Board& getBoard();
+
    private:
+    // game state
     SystemState currentState;
     Chess::Board currentBoard;  // valid chess position
     PlayerSettings players[2];
 
-    // track partial moves
-    Chess::Square pickupSquare;
-    Chess::PieceType pickedUpPiece;
-    Chess::ChessColor pickedUpColor;
-    bool hasPickedUpPiece;
-
     // sensor state tracking
-    Chess::Bitboard sensorOccupancy;  // current physical board state
+    Chess::Bitboard sensorOccupancy;
 
-   public:
-    // constructor
-    GameManager();
+    // move phase state machine
+    MovePhase movePhase;
+    Chess::Square attackingSquare;  // where the moving piece came from
+    Chess::Move pendingMove;        // fully-resolved legal move (set once both
+                                    // from- and to-squares are known)
+    // Set when movePhase == CAPTURED_REMOVED
+    Chess::Square capturedSquare;  // square the captured piece was on
+    // Set when movePhase >= CASTLING_BOTH_LIFTED
+    Chess::Square rookFromSquare;  // rook origin
+    Chess::Square rookToSquare;    // rook destination
+    Chess::Square kingToSquare;    // king destination
+    // Set when movePhase == CASTLING_ONE_PLACED
+    bool kingPlaced;
+    bool rookPlaced;
 
-    // initialize game to starting state
-    void init();
-
-    // new board state
-    void updateBoard(uint64_t newBoard);
-
-    // ------------ helper methods for updating board state
-    void updateSensorOccupancy(Chess::Square square, bool occupied);
-
-    void handlePiecePickup(Chess::Square square);
-
-    void handlePiecePlacement(Chess::Square square);
-
+    // internal helper methods
+    void updateSensorOccupancy(Chess::Square sq, bool occupied);
+    void handlePiecePickup(Chess::Square sq);
+    void handlePiecePlacement(Chess::Square sq);
+    /// Validates, applies `move` to the board, resets move-phase, and checks
+    /// for game-end conditions. Sets ERROR_RECOVERY on failure.
+    void executeMove(Chess::Move move);
+    /// Resets all move-phase variables to IDLE without touching board state.
+    void resetMovePhase();
+    /// Searches the legal-move list for a move from `from` to `to`.
+    /// Returns true and sets `out` on success.
+    bool findLegalMove(Chess::Square from, Chess::Square to, Chess::Move& out) const;
+    // Search for en passant move from 'from' that captures pawn on 'capturedPawnSq'
+    // returns true and sets 'out' on success
+    bool findEnPassantMove(Chess::Square from, Chess::Square capturedPawnSq, Chess::Move& out) const;
+    // Given rook square that was just lifted and king already lifted, determine legal castle
+    // populate rookFromSquare, rookToSquare, kingToSquare, pendingMove
+    // Return true if castle is legal
+    bool resolveCastle(Chess::Square rookSq);
+    /// Returns true if any legal move captures a piece on `targetSq`.
+    // bool squareIsCaptureTarget(Chess::Square targetSq) const;
     void checkGameEndConditions();
-
-    // change turns
-    PlayerSettings& getSettings(uint8_t player);  // player: 0 or 1
-
-    // set settings
-    void setSettings(uint8_t playerNum, bool showBestMove, bool showLegalMoves);
-
-    // returns the board
-    Chess::Board& getBoard();
 };
 
 extern GameManager game;
