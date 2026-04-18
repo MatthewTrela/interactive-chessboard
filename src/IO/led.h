@@ -2,6 +2,7 @@
 #define LEDS_H
 
 #include "global.h"
+#include "io_expander.h"
 
 // LED timing constants
 #define LED_FLUSH_INTERVAL_MS 30  // 33Hz refresh rate
@@ -29,15 +30,5 @@ void loadCustomMapping();   // You can customize this for your orientation
 void testAllLEDs();                                     // Test pattern to verify all LEDs work
 uint8_t getLEDIndex(uint8_t row, uint8_t col);          // Convert grid to strip index
 bool getSwitchStateFromGrid(uint8_t row, uint8_t col);  // get the switch state based on row and col position
-
-// Read all 4 IO expanders into a 64-bit bitmap
-// bit (row*8 + col) = 1 if piece present
-uint64_t readBoardBitmap();
-
-// Get state of single square (0-7, 0-7)
-bool getSquareOccupied(uint8_t row, uint8_t col);
-
-// Debug: print board to Serial
-void printBoardState();
 
 #endif

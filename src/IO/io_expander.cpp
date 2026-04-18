@@ -1,9 +1,20 @@
 #include "io_expander.h"
-#include "led.h"
+
 #include "global.h"
+#include "led.h"
 #include "task/task.h"
 
 bool expanderOnline[4] = {false, false, false, false};
+
+// ========== MAPPING TABLES ==========
+const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2, 12}, {2, 8}, {2, 4}},
+                                   {{1, 2}, {1, 6}, {1, 10}, {1, 14}, {2, 15}, {2, 11}, {2, 7}, {2, 3}},
+                                   {{1, 3}, {1, 7}, {1, 11}, {1, 15}, {2, 14}, {2, 10}, {2, 6}, {2, 2}},
+                                   {{1, 4}, {1, 8}, {1, 12}, {1, 16}, {2, 13}, {2, 9}, {2, 5}, {2, 1}},
+                                   {{4, 1}, {4, 5}, {4, 9}, {4, 13}, {3, 16}, {3, 12}, {3, 8}, {3, 4}},
+                                   {{4, 2}, {4, 6}, {4, 10}, {4, 14}, {3, 15}, {3, 11}, {3, 7}, {3, 3}},
+                                   {{4, 3}, {4, 7}, {4, 11}, {4, 15}, {3, 14}, {3, 10}, {3, 6}, {3, 2}},
+                                   {{4, 4}, {4, 8}, {4, 12}, {4, 16}, {3, 13}, {3, 9}, {3, 5}, {3, 1}}};
 
 void initExpanders(bool polling) {
     MCP23S17 bootstrap(SPI_CS_MCP, 0, &SPI);
@@ -33,12 +44,12 @@ void initExpanders(bool polling) {
             expanders[i]->setInterruptPolarity(2);  // active-low
         }
 
-        mcpValues[i] = expanders[i]->read16();
-        mcpLastValues[i] = mcpValues[i];
+        expanderState.expander[i] = expanders[i]->read16();
         expanderOnline[i] = true;
         anyOnline = true;
 
-        Serial.printf("Expander %d addr %d init OK, val=0x%04X\n", i, expanders[i]->getAddress(), mcpValues[i]);
+        Serial.printf("Expander %d addr %d init OK, val=0x%04X\n", i, expanders[i]->getAddress(),
+                      expanderState.expander[i]);
     }
 
     if (!polling && anyOnline) {
@@ -63,11 +74,11 @@ uint64_t checkAllExpandersForInterrupt() {
         if (!expanderOnline[i]) continue;
 
         uint16_t intf = expanders[i]->getInterruptFlagRegister();
-        uint16_t currentValue = mcpValues[i];
+        uint16_t currentValue = expanderState.expander[i];
 
         if (intf != 0) {
             uint16_t newValue = readWithDebounce(expanders[i]);
-            if (newValue != mcpValues[i]) {
+            if (newValue != expanderState.expander[i]) {
                 processStateChange(i, newValue);
                 currentValue = newValue;
                 lastDisplayUpdate = 0;
@@ -97,20 +108,18 @@ uint16_t readWithDebounce(MCP23S17* expander) {
 }
 
 void processStateChange(int i, uint16_t newValue) {
-    uint16_t lastVals = mcpValues[i];
-    
-    mcpLastValues[i] = lastVals; 
-    mcpValues[i] = newValue;
+    uint16_t lastVals = expanderState.expander[i];
+    expanderState.expander[i] = newValue;
 
     for (int j = 0; j < 16; j++) {
         uint16_t mask = 1 << j;
-        
-        bool isPressed = !(newValue & mask); 
+
+        bool isPressed = !(newValue & mask);
         bool wasPressed = !(lastVals & mask);
 
         if (isPressed != wasPressed) {
-            setLEDFromInput(i, j, isPressed); 
-            
+            setLEDFromInput(i, j, isPressed);
+
             if (isPressed) {
                 Serial.print("ADDR: ");
                 Serial.print(i);
@@ -124,11 +133,71 @@ void processStateChange(int i, uint16_t newValue) {
 void poll() {
     for (int i = 0; i < 4; i++) {
         if (!expanderOnline[i]) continue;
-        
+
         uint16_t newValue = expanders[i]->read16();
-        
-        if (newValue != mcpValues[i]) {
+
+        if (newValue != expanderState.expander[i]) {
             processStateChange(i, newValue);
         }
     }
+}
+
+// bitmap functions
+// ========== BITMAP FUNCTIONS ==========
+uint64_t readBoardBitmap() {
+    uint64_t bitmap = 0;
+
+    for (uint8_t row = 0; row < 8; row++) {
+        for (uint8_t col = 0; col < 8; col++) {
+            uint8_t expander = switchGrid[row][col].exp1 - 1;  // 0-3
+            uint8_t sw = switchGrid[row][col].pin1;            // 1-16
+
+            if (expander >= 4 || sw < 1 || sw > 16) continue;
+
+            uint8_t bitIdx = swToIdx[sw];
+            if (bitIdx == 0xFF) continue;
+
+            uint16_t regValue = expanders[expander]->read16();
+            bool hasPiece = !(regValue & (1 << bitIdx));
+
+            if (hasPiece) {
+                uint8_t sq = row * 8 + col;
+                bitmap |= (1ULL << sq);
+            }
+        }
+    }
+
+    return bitmap;
+}
+
+bool getSquareOccupied(uint8_t row, uint8_t col) {
+    if (row >= 8 || col >= 8) return false;
+
+    uint8_t expander = switchGrid[row][col].exp1 - 1;
+    uint8_t sw = switchGrid[row][col].pin1;
+
+    if (expander >= 4 || sw < 1 || sw > 16) return false;
+
+    uint8_t bitIdx = swToIdx[sw];
+    if (bitIdx == 0xFF) return false;
+
+    uint16_t regValue = expanders[expander]->read16();
+    return !(regValue & (1 << bitIdx));
+}
+
+void printBoardState() {
+    uint64_t board = readBoardBitmap();
+
+    Serial.printf("Board bitmap: 0x%016llX\n", board);
+    Serial.println("  0 1 2 3 4 5 6 7");
+
+    for (int row = 0; row < 8; row++) {
+        Serial.printf("%d ", row);
+        for (int col = 0; col < 8; col++) {
+            bool occupied = (board >> (row * 8 + col)) & 1ULL;
+            Serial.print(occupied ? "X " : ". ");
+        }
+        Serial.println();
+    }
+    Serial.println();
 }

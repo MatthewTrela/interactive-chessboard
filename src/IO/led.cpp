@@ -18,41 +18,7 @@ static struct {
     bool valid;
 } pinMapping[4][16];
 
-struct InputRef {
-    uint8_t exp1;
-    uint8_t pin1;
-};
-
 const uint32_t base_color = 0x00FF00;
-
-static const uint8_t swToIdx[17] = {
-    0xFF,
-    13,  // SW1  = GPA5
-    12,  // SW2  = GPA4
-    11,  // SW3  = GPA3
-    10,  // SW4  = GPA2
-    15,  // SW5  = GPA7
-    14,  // SW6  = GPA6
-    8,   // SW7  = GPA0
-    9,   // SW8  = GPA1
-    0,   // SW9  = GPB0
-    1,   // SW10 = GPB1
-    5,   // SW11 = GPB5
-    7,   // SW12 = GPB7
-    2,   // SW13 = GPB2
-    3,   // SW14 = GPB3
-    4,   // SW15 = GPB4
-    6    // SW16 = GPB6
-};
-
-const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2, 12}, {2, 8}, {2, 4}},
-                                   {{1, 2}, {1, 6}, {1, 10}, {1, 14}, {2, 15}, {2, 11}, {2, 7}, {2, 3}},
-                                   {{1, 3}, {1, 7}, {1, 11}, {1, 15}, {2, 14}, {2, 10}, {2, 6}, {2, 2}},
-                                   {{1, 4}, {1, 8}, {1, 12}, {1, 16}, {2, 13}, {2, 9}, {2, 5}, {2, 1}},
-                                   {{4, 1}, {4, 5}, {4, 9}, {4, 13}, {3, 16}, {3, 12}, {3, 8}, {3, 4}},
-                                   {{4, 2}, {4, 6}, {4, 10}, {4, 14}, {3, 15}, {3, 11}, {3, 7}, {3, 3}},
-                                   {{4, 3}, {4, 7}, {4, 11}, {4, 15}, {3, 14}, {3, 10}, {3, 6}, {3, 2}},
-                                   {{4, 4}, {4, 8}, {4, 12}, {4, 16}, {3, 13}, {3, 9}, {3, 5}, {3, 1}}};
 
 // ========== FLUSH THROTTLING ==========
 static unsigned long lastFlushTime = 0;
@@ -77,7 +43,7 @@ bool getSwitchStateFromGrid(uint8_t row, uint8_t col) {
     uint8_t idx = swToIdx[sw];  // bit position (0-15)
     if (idx == 0xFF) return false;
 
-    return !(mcpValues[expander - 1] & (1 << idx));  // active-low
+    return !(expanderState.expander[expander - 1] & (1 << idx));
 }
 
 // ========== INITIALIZATION ==========
@@ -149,7 +115,7 @@ void syncLEDsFromInputState() {
     Serial.println("Syncing LEDs from current input state...");
 
     for (int i = 0; i < NUM_EXPANDERS; i++) {
-        uint16_t value = mcpValues[i];
+        uint16_t value = expanderState.expander[i];
 
         for (int pin = 0; pin < 16; pin++) {
             if (pinMapping[i][pin].valid) {
@@ -295,67 +261,4 @@ void testAllLEDs() {
     flushLEDBuffer();
 
     Serial.println("LED test complete");
-}
-
-// Board translation methods
-
-uint64_t readBoardBitmap() {
-    uint64_t bitmap = 0;
-
-    for (uint8_t row = 0; row < 8; row++) {
-        for (uint8_t col = 0; col < 8; col++) {
-            uint8_t expander = switchGrid[row][col].exp1 - 1;  // 0-3
-            uint8_t sw = switchGrid[row][col].pin1;            // 1-16
-
-            if (expander >= 4 || sw < 1 || sw > 16) continue;
-
-            uint8_t bitIdx = swToIdx[sw];
-            if (bitIdx == 0xFF) continue;
-
-            // Read the expander register
-            uint16_t regValue = expanders[expander]->read16();
-
-            // Active-low: 0 = no piece, 1 = piece present
-            bool hasPiece = !(regValue & (1 << bitIdx));
-
-            if (hasPiece) {
-                uint8_t sq = row * 8 + col;  // chess bitboard format
-                bitmap |= (1ULL << sq);
-            }
-        }
-    }
-
-    return bitmap;
-}
-
-bool getSquareOccupied(uint8_t row, uint8_t col) {
-    if (row >= 8 || col >= 8) return false;
-
-    uint8_t expander = switchGrid[row][col].exp1 - 1;
-    uint8_t sw = switchGrid[row][col].pin1;
-
-    if (expander >= 4 || sw < 1 || sw > 16) return false;
-
-    uint8_t bitIdx = swToIdx[sw];
-    if (bitIdx == 0xFF) return false;
-
-    uint16_t regValue = expanders[expander]->read16();
-    return !(regValue & (1 << bitIdx));
-}
-
-void printBoardState() {
-    uint64_t board = readBoardBitmap();
-
-    Serial.printf("Board bitmap: 0x%016llX\n", board);
-    Serial.println("  0 1 2 3 4 5 6 7");
-
-    for (int row = 0; row < 8; row++) {
-        Serial.printf("%d ", row);
-        for (int col = 0; col < 8; col++) {
-            bool occupied = (board >> (row * 8 + col)) & 1ULL;
-            Serial.print(occupied ? "X " : ". ");
-        }
-        Serial.println();
-    }
-    Serial.println();
 }
