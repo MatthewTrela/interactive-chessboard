@@ -6,16 +6,27 @@
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 #include <MCP23S17.h>
+class DisplayManager;
 
 // I2C Pins
-#define I2C_SDA 20
-#define I2C_SCL 19
+#define P1_SDA 4
+#define P1_SCL 5
+#define P2_SDA 1
+#define P2_SCL 2
 
 // SPI Pins
 #define SPI_MOSI 11
 #define SPI_MISO 13
 #define SPI_SCK 12
 #define SPI_CS_MCP 10  // Shared CS for all MCP23S17
+
+// Encoder pins
+#define ENCODER_P1_A 6
+#define ENCODER_P1_B 7
+#define ENCODER_P1_BUTTON 15
+#define ENCODER_P2_A 40
+#define ENCODER_P2_B 41
+#define ENCODER_P2_BUTTON 42
 
 // MCP23S17
 #define NUM_EXPANDERS 4
@@ -25,15 +36,7 @@
 #define MCP_ADDR_3 2  // 010
 #define MCP_ADDR_4 3  // 011
 
-#define MCP_INT_PIN 1
-
-// Encoder pins
-#define ENCODER_P1_A 6
-#define ENCODER_P1_B 7
-#define ENCODER_P1_BUTTON 15
-#define ENCODER_P2_A 40
-#define ENCODER_P2_B 41
-#define ENCODER_P2_BUTTON 42
+#define MCP_INT_PIN 14
 
 #define MCP_DEBOUNCE_DELAY_MS 15
 
@@ -52,12 +55,12 @@
 #define OLED_UPDATE_INTERVAL_MS 100
 
 // LED Strip
-#define LED_PIN 5
+#define LED_PIN 48
 #define NUM_LEDS 64
 #define LED_BRIGHTNESS 255
 
 // ========== GLOBAL OBJECTS (Declared as extern) ==========
-extern Adafruit_SSD1306* display;
+extern DisplayManager* uiManager;
 extern Adafruit_NeoPixel* strip;
 
 // MCP23S17 objects

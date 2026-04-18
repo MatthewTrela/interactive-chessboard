@@ -1,6 +1,7 @@
 #include "io_expander.h"
 #include "led.h"
 #include "global.h"
+#include "task/task.h"
 
 bool expanderOnline[4] = {false, false, false, false};
 
@@ -47,27 +48,38 @@ void initExpanders(bool polling) {
 }
 
 // ISR
-void IRAM_ATTR onExpanderInterrupt() { interruptTriggered = true; }
+void IRAM_ATTR onExpanderInterrupt() {
+    BaseType_t higherPriorityTaskWoken = pdFALSE;
+    if (GameLoopTaskHandle != nullptr) {
+        vTaskNotifyGiveFromISR(GameLoopTaskHandle, &higherPriorityTaskWoken);
+    }
+    portYIELD_FROM_ISR(higherPriorityTaskWoken);
+}
 
-// sweep function when interrupt it triggered
-void checkAllExpandersForInterrupt() {
-    bool anyChange = false;
+uint64_t checkAllExpandersForInterrupt() {
+    uint64_t newOccupancy = 0;
 
     for (int i = 0; i < 4; i++) {
         if (!expanderOnline[i]) continue;
 
         uint16_t intf = expanders[i]->getInterruptFlagRegister();
-        if (intf == 0) continue;
+        uint16_t currentValue = mcpValues[i];
 
-        uint16_t newValue = readWithDebounce(expanders[i]);
-        if (newValue != mcpValues[i]) {
-            processStateChange(i, newValue);
-            anyChange = true;
-            Serial.printf("Expander %d changed: 0x%04X\n", i, newValue);
+        if (intf != 0) {
+            uint16_t newValue = readWithDebounce(expanders[i]);
+            if (newValue != mcpValues[i]) {
+                processStateChange(i, newValue);
+                currentValue = newValue;
+                lastDisplayUpdate = 0;
+                Serial.printf("Expander %d changed: 0x%04X\n", i, newValue);
+            }
         }
+
+        uint64_t occupied = (~(uint64_t)currentValue) & 0xFFFF;
+        newOccupancy |= (occupied << (i * 16));
     }
 
-    if (anyChange) lastDisplayUpdate = 0;
+    return newOccupancy;
 }
 
 uint16_t readWithDebounce(MCP23S17* expander) {

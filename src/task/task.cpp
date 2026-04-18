@@ -1,26 +1,17 @@
 #include "task.h"
 #include "global.h"
+#include "IO/io_expander.h"
+#include "Chess/game_manager.h"
 
-TaskHandle_t EncoderTaskHandle = NULL;
-TaskHandle_t BoardSensorTaskHandle = NULL;
+TaskHandle_t GameLoopTaskHandle = NULL;
 TaskHandle_t UITaskHandle = NULL;
 TaskHandle_t EngineTaskHandle = NULL;
 
-void EncoderTask(void *pvParameters) {
+void gameLoopTask(void *pvParameters) {
     for(;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        // TODO
-        // Read encoder data
-        // Pass state changes to UI handler
-        // Might not be nessessary
-    }
-}
-
-void BoardSensorTask(void *pvParameters) {
-    for(;;) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        // read IO Expanders and find triggered reed switches
-        // Show legal moves and best moves if active
+        uint64_t newOccupancy = checkAllExpandersForInterrupt();
+        game.updateBoard(newOccupancy);
     }
 }
 
@@ -43,6 +34,7 @@ void EngineTask(void *pvParameters) {
 
 void initTasks() {
     // TODO: Create tasks and assign priorities
-    xTaskCreatePinnedToCore(EngineTask, "Engine", 8192, NULL, 1, &EngineTaskHandle, 0);
+    // xTaskCreatePinnedToCore(EngineTask, "Engine", 8192, nullptr, 1, &EngineTaskHandle, 0);
+    xTaskCreatePinnedToCore(gameLoopTask, "GameLoop", 4096, nullptr, 5, &GameLoopTaskHandle, 1);
     
 }

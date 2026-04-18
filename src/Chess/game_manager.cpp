@@ -1,4 +1,6 @@
 #include "game_manager.h"
+#include "global.h"
+#include "IO/display_manager.h"
 
 GameManager game;
 
@@ -97,6 +99,8 @@ void GameManager::handlePiecePickup(Chess::Square square) {
     pickedUpPiece = currentBoard.pieceAt(square);
     pickedUpColor = currentBoard.colorAt(square);
     hasPickedUpPiece = true;
+
+    uiManager->showPickedUpPiece(pickedUpPiece, pickedUpColor);
 
     if (players[currentBoard.getSideToMove() == Chess::ChessColor::White ? 0 : 1].showLegalMoves) {
         // TODO: Highlight legal moves for piece if showLegalMoves enabled

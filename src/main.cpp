@@ -3,6 +3,9 @@
 #include "IO/led.h"
 #include "IO/oled.h"
 #include "Chess/chess.hpp"
+#include "task/task.h"
+#include "Chess/game_manager.h"
+#include "IO/display_manager.h"
 
 using namespace Chess;
 
@@ -14,50 +17,24 @@ void setup() {
 
     // Initialize all global objects
     initGlobals();
+    game.init();
+
+    if (!uiManager->begin()) {
+        Serial.println("OLEDs failed to initialize!");
+    }
 
     // Initialize peripherals
-    initOLED();
     initLEDs();
     initExpanders(false);
 
     // set initial led state
     syncLEDsFromInputState();
 
-    delay(1500);
+    //Setup tasks
+    initTasks();
 }
 
 void loop() {
-    if (interruptTriggered) {
-        // Debounce the interrupt signal
-        unsigned long now = millis();
-        if (now - lastInterruptTime > MCP_DEBOUNCE_DELAY_MS) {
-            lastInterruptTime = now;
 
-            // clear flag
-            interruptTriggered = false;
-
-            // find which expander triggered interrupt
-            checkAllExpandersForInterrupt();
-        } else {
-            // false alarm
-            interruptTriggered = false;
-        }
-    }
-
-    // Periodically flush LED buffer to physical strip
-    static unsigned long lastLEDFlush = 0;
-    if (millis() - lastLEDFlush >= LED_FLUSH_INTERVAL_MS) {
-        flushLEDBuffer();
-        lastLEDFlush = millis();
-    }
-
-    // Update OLED periodically
-    unsigned long now = millis();
-    if (now - lastDisplayUpdate >= OLED_UPDATE_INTERVAL_MS) {
-        poll();
-        updateDisplay();
-        lastDisplayUpdate = now;
-    }
-
-    delay(1);
+    vTaskDelete(NULL);
 }

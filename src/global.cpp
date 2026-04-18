@@ -2,10 +2,11 @@
 
 #include <SPI.h>
 #include <Wire.h>
+#include "IO/display_manager.h"
 
 // ========== OBJECT DEFINITIONS ==========
-Adafruit_SSD1306* display = nullptr;
 Adafruit_NeoPixel* strip = nullptr;
+DisplayManager* uiManager = nullptr;
 
 // Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -22,11 +23,10 @@ unsigned long lastDisplayUpdate = 0;
 
 // ========== INITIALIZATION FUNCTION ==========
 void initGlobals() {
-    Wire.begin(I2C_SDA, I2C_SCL);
     SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, SPI_CS_MCP);
 
-    display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
     strip = new Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+    uiManager = new DisplayManager();
 
     uint8_t addresses[NUM_EXPANDERS] = {MCP_ADDR_1, MCP_ADDR_2, MCP_ADDR_3, MCP_ADDR_4};
     for (int i = 0; i < NUM_EXPANDERS; i++) {
