@@ -24,18 +24,18 @@ struct PlayerSettings {
 /// lifted, lifting the opponent piece on the target square advances the phase
 /// to CAPTURED_REMOVED rather than going to error.
 enum class MovePhase {
-    IDLE,              // No piece in hand; waiting for the moving side to act.
-    ATTACKER_LIFTED,   // Moving-side piece is in hand; to-square not yet known.
-    CAPTURED_REMOVED,  // Attacker in hand AND captured piece removed from board;
-                       // next placement must be on capturedSquare.
+    IDLE,                  // No piece in hand; waiting for the moving side to act.
+    ATTACKER_LIFTED,       // own piece lifted
+    CAPTURED_REMOVED,      // opponent piece lifted, attacker in hand: normal captures and en passant
+    CASTLING_BOTH_LIFTED,  // King and correct rook both in hand
+    CASTLING_ONE_PLACED,   // one castling piece placed
 };
 
 class GameManager {
    public:
-    // constructor
     GameManager();
 
-    // initialize game to starting state
+    // reset to starting position
     void init();
 
     /// Called whenever a hall-effect / reed switch changes state.
@@ -65,21 +65,35 @@ class GameManager {
                                     // from- and to-squares are known)
     // Set when movePhase == CAPTURED_REMOVED
     Chess::Square capturedSquare;  // square the captured piece was on
+    // Set when movePhase >= CASTLING_BOTH_LIFTED
+    Chess::Square rookFromSquare;  // rook origin
+    Chess::Square rookToSquare;    // rook destination
+    Chess::Square kingToSquare;    // king destination
+    // Set when movePhase == CASTLING_ONE_PLACED
+    bool kingPlaced;
+    bool rookPlaced;
 
     // internal helper methods
     void updateSensorOccupancy(Chess::Square sq, bool occupied);
     void handlePiecePickup(Chess::Square sq);
     void handlePiecePlacement(Chess::Square sq);
-    /// Searches the legal-move list for a move from `from` to `to`.
-    /// Returns true and sets `out` on success.
-    bool findLegalMove(Chess::Square from, Chess::Square to, Chess::Move& out) const;
-    /// Returns true if any legal move captures a piece on `targetSq`.
-    bool squareIsCaptureTarget(Chess::Square targetSq) const;
     /// Validates, applies `move` to the board, resets move-phase, and checks
     /// for game-end conditions. Sets ERROR_RECOVERY on failure.
     void executeMove(Chess::Move move);
     /// Resets all move-phase variables to IDLE without touching board state.
     void resetMovePhase();
+    /// Searches the legal-move list for a move from `from` to `to`.
+    /// Returns true and sets `out` on success.
+    bool findLegalMove(Chess::Square from, Chess::Square to, Chess::Move& out) const;
+    // Search for en passant move from 'from' that captures pawn on 'capturedPawnSq'
+    // returns true and sets 'out' on success
+    bool findEnPassantMove(Chess::Square from, Chess::Square capturedPawnSq, Chess::Move& out) const;
+    // Given rook square that was just lifted and king already lifted, determine legal castle
+    // populate rookFromSquare, rookToSquare, kingToSquare, pendingMove
+    // Return true if castle is legal
+    bool resolveCastle(Chess::Square rookSq);
+    /// Returns true if any legal move captures a piece on `targetSq`.
+    // bool squareIsCaptureTarget(Chess::Square targetSq) const;
     void checkGameEndConditions();
 };
 
