@@ -296,3 +296,66 @@ void testAllLEDs() {
 
     Serial.println("LED test complete");
 }
+
+// Board translation methods
+
+uint64_t readBoardBitmap() {
+    uint64_t bitmap = 0;
+
+    for (uint8_t row = 0; row < 8; row++) {
+        for (uint8_t col = 0; col < 8; col++) {
+            uint8_t expander = switchGrid[row][col].exp1 - 1;  // 0-3
+            uint8_t sw = switchGrid[row][col].pin1;            // 1-16
+
+            if (expander >= 4 || sw < 1 || sw > 16) continue;
+
+            uint8_t bitIdx = swToIdx[sw];
+            if (bitIdx == 0xFF) continue;
+
+            // Read the expander register
+            uint16_t regValue = expanders[expander]->read16();
+
+            // Active-low: 0 = no piece, 1 = piece present
+            bool hasPiece = !(regValue & (1 << bitIdx));
+
+            if (hasPiece) {
+                uint8_t sq = row * 8 + col;  // chess bitboard format
+                bitmap |= (1ULL << sq);
+            }
+        }
+    }
+
+    return bitmap;
+}
+
+bool getSquareOccupied(uint8_t row, uint8_t col) {
+    if (row >= 8 || col >= 8) return false;
+
+    uint8_t expander = switchGrid[row][col].exp1 - 1;
+    uint8_t sw = switchGrid[row][col].pin1;
+
+    if (expander >= 4 || sw < 1 || sw > 16) return false;
+
+    uint8_t bitIdx = swToIdx[sw];
+    if (bitIdx == 0xFF) return false;
+
+    uint16_t regValue = expanders[expander]->read16();
+    return !(regValue & (1 << bitIdx));
+}
+
+void printBoardState() {
+    uint64_t board = readBoardBitmap();
+
+    Serial.printf("Board bitmap: 0x%016llX\n", board);
+    Serial.println("  0 1 2 3 4 5 6 7");
+
+    for (int row = 0; row < 8; row++) {
+        Serial.printf("%d ", row);
+        for (int col = 0; col < 8; col++) {
+            bool occupied = (board >> (row * 8 + col)) & 1ULL;
+            Serial.print(occupied ? "X " : ". ");
+        }
+        Serial.println();
+    }
+    Serial.println();
+}
