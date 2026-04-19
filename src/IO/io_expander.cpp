@@ -29,18 +29,18 @@ void enableHAEN_AllChips() {
 }
 
 void initExpanders(bool polling) {
-    pinMode(SPI_CS_MCP, OUTPUT);
-    digitalWrite(SPI_CS_MCP, HIGH);
+    // pinMode(SPI_CS_MCP, OUTPUT);
+    // digitalWrite(SPI_CS_MCP, HIGH);
 
-    // Broadcast HAEN to ALL chips while they're all addr 0
-    enableHAEN_AllChips();
-    delay(2);
-    // MCP23S17 bootstrap(SPI_CS_MCP, 0, &SPI);
-    // if (bootstrap.begin()) {
-    //     bootstrap.enableHardwareAddress();
-    //     delay(2);
-    //     Serial.println("HAEN bootstrap done via addr 0");
-    // }
+    // // Broadcast HAEN to ALL chips while they're all addr 0
+    // enableHAEN_AllChips();
+    // delay(2);
+    MCP23S17 bootstrap(SPI_CS_MCP, 0, &SPI);
+    if (bootstrap.begin()) {
+        bootstrap.enableHardwareAddress();
+        delay(2);
+        Serial.println("HAEN bootstrap done via addr 0");
+    }
 
     bool anyOnline = false;
 
