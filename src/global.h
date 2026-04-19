@@ -20,6 +20,7 @@ class DisplayManager;
 #define SPI_MISO 11
 #define SPI_SCK 12
 #define SPI_CS_MCP 10  // Shared CS for all MCP23S17
+#define MCP_INT_PIN 14
 
 // Encoder pins
 #define ENCODER_P1_A 6
@@ -37,7 +38,7 @@ class DisplayManager;
 #define MCP_ADDR_3 2  // 010
 #define MCP_ADDR_4 3  // 011
 
-#define MCP_INT_PIN 14
+
 
 #define MCP_DEBOUNCE_DELAY_MS 15
 
