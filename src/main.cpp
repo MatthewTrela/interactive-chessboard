@@ -1,11 +1,11 @@
-#include "global.h"
+#include "Chess/chess.hpp"
+#include "Chess/game_manager.h"
+#include "IO/display_manager.h"
 #include "IO/io_expander.h"
 #include "IO/led.h"
 #include "IO/oled.h"
-#include "Chess/chess.hpp"
+#include "global.h"
 #include "task/task.h"
-#include "Chess/game_manager.h"
-#include "IO/display_manager.h"
 
 using namespace Chess;
 
@@ -28,16 +28,13 @@ void setup() {
 
     // Initialize peripherals
     initLEDs();
-    initExpanders(false);
+    initExpanders(true);
 
     // set initial led state
     syncLEDsFromInputState();
 
-    //Setup tasks
+    // Setup tasks
     initTasks();
 }
 
-void loop() {
-
-    vTaskDelete(NULL);
-}
+void loop() { vTaskDelete(NULL); }
