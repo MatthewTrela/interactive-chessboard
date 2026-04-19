@@ -13,6 +13,8 @@ void gameLoopTask(void* pvParameters) {
         poll();
         // ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         uint64_t newOccupancy = readBoardBitmap();
+        // uiManager->drawGrid(1);
+        // uiManager->drawGrid(2);
         game.updateBoard(newOccupancy);
         vTaskDelay(pdMS_TO_TICKS(10));
     }

@@ -1,4 +1,5 @@
 #include "display_manager.h"
+#include "IO/io_expander.h"
 
 static const char* pieceTypeName(Chess::PieceType pt) {
     switch (pt) {
@@ -95,4 +96,46 @@ void DisplayManager::showPickedUpPiece(Chess::PieceType piece, Chess::ChessColor
 
     printMessage(playerID, 0, "Picked up:      ", false);
     printMessage(playerID, 1, colorStr + " " + pieceTypeName(piece), true);
+}
+
+void DisplayManager::drawGrid(int playerID) {
+    Adafruit_SSD1306 *display;
+    if (playerID == 1) {
+        display = &displayP1;
+    } else if (playerID == 2) {
+        display = &displayP2;
+    }
+
+    uint64_t boardState = readBoardBitmap();
+    display->clearDisplay();
+
+    // Draw title
+    display->setTextSize(1);
+    display->setTextColor(SSD1306_WHITE);
+    display->setCursor(0, 0);
+
+    // Draw 8x8 grid
+    // 128 wide, leave margins → 14px per square + 1px gap = 15px
+    const uint8_t CELL = 7;
+    const uint8_t GAP = 1;
+    const uint8_t CELL_WITH_GAP = CELL + GAP;
+    const uint8_t GRID_START_X = 4;
+    const uint8_t GRID_START_Y = 0;
+
+    for (uint8_t row = 0; row < 8; row++) {
+        for (uint8_t col = 0; col < 8; col++) {
+            bool pressed = (~boardState & (1ULL << ((row * 8) + col))) != 0;
+
+            uint8_t x = GRID_START_X + col * CELL_WITH_GAP;
+            uint8_t y = GRID_START_Y + (7 - row) * CELL_WITH_GAP;  // flip Y so row 0 = top
+
+            if (pressed) {
+                display->fillRect(x, y, CELL, CELL, SSD1306_WHITE);
+            } else {
+                display->drawRect(x, y, CELL, CELL, SSD1306_WHITE);
+            }
+        }
+    }
+
+    display->display();
 }
