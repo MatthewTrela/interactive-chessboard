@@ -16,13 +16,31 @@ const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2
                                    {{4, 3}, {4, 7}, {4, 11}, {4, 15}, {3, 14}, {3, 10}, {3, 6}, {3, 2}},
                                    {{4, 4}, {4, 8}, {4, 12}, {4, 16}, {3, 13}, {3, 9}, {3, 5}, {3, 1}}};
 
+void enableHAEN_AllChips() {
+    // Before HAEN, all chips respond to addr 0.
+    // Write IOCON with HAEN=1 (bit 3) directly.
+    // IOCON address in BANK=0 mode is 0x0A
+    // Value: HAEN (0x08) | SEQOP disabled = 0x28 is typical, but just HAEN:
+    digitalWrite(SPI_CS_MCP, LOW);
+    SPI.transfer(0x40);  // Opcode: write, addr=0b000, R/W=0
+    SPI.transfer(0x0A);  // IOCON register
+    SPI.transfer(0x08);  // HAEN bit
+    digitalWrite(SPI_CS_MCP, HIGH);
+}
+
 void initExpanders(bool polling) {
-    MCP23S17 bootstrap(SPI_CS_MCP, 0, &SPI);
-    if (bootstrap.begin()) {
-        bootstrap.enableHardwareAddress();
-        delay(2);
-        Serial.println("HAEN bootstrap done via addr 0");
-    }
+    pinMode(SPI_CS_MCP, OUTPUT);
+    digitalWrite(SPI_CS_MCP, HIGH);
+
+    // Broadcast HAEN to ALL chips while they're all addr 0
+    enableHAEN_AllChips();
+    delay(2);
+    // MCP23S17 bootstrap(SPI_CS_MCP, 0, &SPI);
+    // if (bootstrap.begin()) {
+    //     bootstrap.enableHardwareAddress();
+    //     delay(2);
+    //     Serial.println("HAEN bootstrap done via addr 0");
+    // }
 
     bool anyOnline = false;
 
