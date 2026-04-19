@@ -30,6 +30,10 @@ void setup() {
     initLEDs();
     initExpanders(false);
 
+    //Draw on OLEDs
+    uiManager->drawGrid(1);
+    uiManager->drawGrid(2);
+
     // set initial led state
     syncLEDsFromInputState();
 

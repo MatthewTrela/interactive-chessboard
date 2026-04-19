@@ -2,6 +2,7 @@
 #include "global.h"
 #include "IO/io_expander.h"
 #include "Chess/game_manager.h"
+#include "IO/display_manager.h"
 
 TaskHandle_t GameLoopTaskHandle = NULL;
 TaskHandle_t UITaskHandle = NULL;
@@ -11,6 +12,8 @@ void gameLoopTask(void *pvParameters) {
     for(;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         uint64_t newOccupancy = readBoardBitmap();
+        uiManager->drawGrid(1);
+        uiManager->drawGrid(2);
         game.updateBoard(newOccupancy);
     }
 }
