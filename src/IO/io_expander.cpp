@@ -154,6 +154,7 @@ void processStateChange(int i, uint16_t newValue) {
 
         if (isPressed != wasPressed) {
             setLEDFromInput(i, j, isPressed);
+            flushLEDBuffer();
 
             if (isPressed) {
                 uint8_t row, col;
