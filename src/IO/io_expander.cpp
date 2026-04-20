@@ -16,6 +16,23 @@ const InputRef switchGrid[8][8] = {{{1, 1}, {1, 5}, {1, 9}, {1, 13}, {2, 16}, {2
                                    {{4, 3}, {4, 7}, {4, 11}, {4, 15}, {3, 14}, {3, 10}, {3, 6}, {3, 2}},
                                    {{4, 4}, {4, 8}, {4, 12}, {4, 16}, {3, 13}, {3, 9}, {3, 5}, {3, 1}}};
 
+bool getRowColFromExpanderPin(uint8_t expander, uint8_t pin, uint8_t& row, uint8_t& col) {
+    for (uint8_t r = 0; r < 8; r++) {
+        for (uint8_t c = 0; c < 8; c++) {
+            if (switchGrid[r][c].exp1 - 1 == expander) {
+                uint8_t sw = switchGrid[r][c].pin1;
+                uint8_t bitIdx = swToIdx[sw];
+                if (bitIdx == pin) {
+                    row = r;
+                    col = c;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 void enableHAEN_AllChips() {
     // Before HAEN, all chips respond to addr 0.
     // Write IOCON with HAEN=1 (bit 3) directly.
@@ -139,10 +156,19 @@ void processStateChange(int i, uint16_t newValue) {
             setLEDFromInput(i, j, isPressed);
 
             if (isPressed) {
-                Serial.print("ADDR: ");
-                Serial.print(i);
-                Serial.print(" BIT: ");
-                Serial.println(j);
+                uint8_t row, col;
+                if (getRowColFromExpanderPin(i, j, row, col)) {
+                    Serial.printf("Pressed: E%d, Pin %d → row=%d, col=%d\n", i, j, row, col);
+                } else {
+                    Serial.printf("Pressed: E%d, Pin %d\n", i, j);
+                }
+            } else {
+                uint8_t row, col;
+                if (getRowColFromExpanderPin(i, j, row, col)) {
+                    Serial.printf("Released: E%d, Pin %d → row=%d, col=%d\n", i, j, row, col);
+                } else {
+                    Serial.printf("Released: E%d, Pin %d\n", i, j);
+                }
             }
         }
     }

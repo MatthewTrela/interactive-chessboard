@@ -33,6 +33,8 @@ static const uint8_t swToIdx[17] = {
     6    // SW16 = GPB6
 };
 
+bool getRowColFromExpanderPin(uint8_t expander, uint8_t pin, uint8_t& row, uint8_t& col);
+
 void initExpanders(bool polling);
 uint64_t checkAllExpandersForInterrupt();  // Sweep all devices
 uint16_t readWithDebounce(MCP23S17* expander);
