@@ -30,7 +30,7 @@ void setup() {
     initLEDs();
     initExpanders(true);
 
-    //Draw on OLEDs
+    // Draw on OLEDs
     uiManager->drawGrid(1);
     uiManager->drawGrid(2);
 
