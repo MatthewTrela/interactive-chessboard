@@ -286,6 +286,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         if (sq == attackingSquare) {
             Serial.println("[handlePiecePlacement] -> CANCEL branch");
             resetMovePhase();
+            flushLEDBuffer(true);
             return;
         }
 
