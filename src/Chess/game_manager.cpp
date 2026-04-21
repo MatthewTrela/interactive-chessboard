@@ -254,7 +254,6 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         // cancel move
         if (sq == attackingSquare) {
             clearAllLEDs();
-            flushLEDBuffer();
             resetMovePhase();
             return;
         }
