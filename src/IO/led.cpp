@@ -202,14 +202,19 @@ void highlightLegalMoves(Chess::Square from, Chess::Board& board) {
     flushLEDBuffer();
 }
 
-void lightAllStartingSquares() {
+void lightAllStartingSquares(uint64_t sensorOccupancy) {
     delay(10);
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
-            if (row <= 1) {
-                setLED(row, col, WHITE);
-            } else if (row >= 6) {
-                setLED(row, col, RED);
+            uint8_t sq = row * 8 + col;
+            bool isStartingSquare = (row <= 1 || row >= 6);
+            bool hasPiece = (sensorOccupancy >> sq) & 1ULL;
+
+            // Only light if it's a starting square AND piece is missing
+            if (isStartingSquare && !hasPiece) {
+                setLED(row, col, (row <= 1) ? WHITE : RED);
+            } else {
+                setLED(row, col, 0x000000);
             }
         }
     }

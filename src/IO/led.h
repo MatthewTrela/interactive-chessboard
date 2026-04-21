@@ -1,9 +1,9 @@
 #ifndef LEDS_H
 #define LEDS_H
 
+#include "Chess/chess.hpp"
 #include "global.h"
 #include "io_expander.h"
-#include "Chess/chess.hpp"
 
 // LED timing constants
 #define LED_FLUSH_INTERVAL_MS 30  // 33Hz refresh rate
@@ -24,7 +24,7 @@ void setAllLEDs(uint32_t color);
 void highlightSquare(uint8_t row, uint8_t col, uint32_t color);
 void highlightLegalMoves(Chess::Square from, Chess::Board& board);
 
-void lightAllStartingSquares();
+void lightAllStartingSquares(uint64_t sensorOccupancy = 0);
 void syncLEDsFromSensors(uint64_t sensorOccupancy);
 
 // Mapping configuration
