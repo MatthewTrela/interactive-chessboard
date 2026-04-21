@@ -116,10 +116,12 @@ uint64_t checkAllExpandersForInterrupt() {
             if (newValue != expanderState.expander[i]) {
                 processStateChange(i, newValue);
                 currentValue = newValue;
-                lastDisplayUpdate = 0;
                 Serial.printf("Expander %d changed: 0x%04X\n", i, newValue);
             }
         }
+
+        expanderState.expander[i] = expanders[i]->read16();
+        currentValue = expanderState.expander[i];
 
         uint64_t occupied = (~(uint64_t)currentValue) & 0xFFFF;
         newOccupancy |= (occupied << (i * 16));

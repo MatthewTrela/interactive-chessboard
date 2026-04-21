@@ -14,7 +14,7 @@ ExpanderState expanderLastState = {0, 0, 0, 0};
 
 volatile bool interruptTriggered = false;
 unsigned long lastInterruptTime = 0;
-unsigned long lastDisplayUpdate = 0;
+// unsigned long lastDisplayUpdate = 0;
 
 // ========== INITIALIZATION FUNCTION ==========
 void initGlobals() {

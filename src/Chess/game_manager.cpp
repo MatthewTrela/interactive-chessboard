@@ -72,10 +72,7 @@ void GameManager::updateBoard(uint64_t newBoard) {
     // debounce
     if (newBoard == lastDebouncedBoard) {
         debounceStartTime = 0;
-        if (movePhase == MovePhase::ATTACKER_LIFTED) {
-            resetMovePhase();
-            flushLEDBuffer(true);
-        }
+        sensorOccupancy = static_cast<Chess::Bitboard>(newBoard);
         return;
     }
 

@@ -66,8 +66,8 @@ class DisplayManager;
 #define LEGAL_MOVE_COLOR 0x0000FF     // blue
 #define LEGAL_CAPTURE_COLOR 0xFF8800  // orange
 #define LIFTED_PIECE_COLOR 0xFFFFFF   // white
-#define WHITE 0xFFFFFF                // white 
-#define RED 0xFF0000                  // red 
+#define WHITE 0xFFFFFF                // white
+#define RED 0xFF0000                  // red
 
 // ========== GLOBAL OBJECTS (Declared as extern) ==========
 extern DisplayManager* uiManager;
@@ -86,7 +86,7 @@ extern ExpanderState expanderLastState;
 extern volatile bool interruptTriggered;
 
 extern unsigned long lastInterruptTime;
-extern unsigned long lastDisplayUpdate;
+// extern unsigned long lastDisplayUpdate;
 
 // ========== FUNCTION DECLARATIONS ==========
 void initGlobals();  // Call this in setup() to initialize all objects
