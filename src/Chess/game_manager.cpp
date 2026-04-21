@@ -28,8 +28,8 @@ void GameManager::init() {
     sensorOccupancy = readBoardBitmap();
 
     // Set initial user settings
-    players[0] = PlayerSettings{false, false};
-    players[1] = PlayerSettings{false, false};
+    players[0] = PlayerSettings{true, true};
+    players[1] = PlayerSettings{true, true};
 
     currentState = SystemState::INIT;
     resetMovePhase();
@@ -87,14 +87,20 @@ void GameManager::updateBoard(uint64_t newBoard) {
         return;
     }
 
+    Serial.println("[updateBoard] -> board ACCEPTED, continuing");
+
     lastDebouncedBoard = static_cast<Chess::Bitboard>(newBoard);
     debounceStartTime = 0;
 
     // check if piece picked up or put down
     Chess::Bitboard diffBoard = sensorOccupancy ^ static_cast<Chess::Bitboard>(newBoard);
-    if (diffBoard == 0) return;
+    if (diffBoard == 0) {
+        Serial.println("[updateBoard] -> early return: diffBoard == 0");
+        return;
+    }
 
     if (Chess::BitUtils::countBits(diffBoard) != 1) {
+        Serial.printf("[updateBoard] -> ERROR: diffBoard has %d bits\n", Chess::BitUtils::countBits(diffBoard));
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
@@ -106,8 +112,10 @@ void GameManager::updateBoard(uint64_t newBoard) {
     updateSensorOccupancy(changedSq, nowOccupied);
 
     if (wasOccupied && !nowOccupied) {
+        Serial.println("[updateBoard] -> calling handlePiecePickup");
         handlePiecePickup(changedSq);
     } else {
+        Serial.println("[updateBoard] -> calling handlePiecePlacement");
         handlePiecePlacement(changedSq);
     }
 }
@@ -267,14 +275,17 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
 void GameManager::handlePiecePlacement(Chess::Square sq) {
     // IDLE: nothing in hand
     if (movePhase == MovePhase::IDLE) {
+        Serial.println("[handlePiecePlacement] -> ERROR: IDLE");
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
 
     // ATTACKER_LIFTED
     if (movePhase == MovePhase::ATTACKER_LIFTED) {
+        Serial.printf("[handlePiecePlacement] ATTACKER_LIFTED, sq==attackingSquare? %d\n", sq == attackingSquare);
         // cancel move
         if (sq == attackingSquare) {
+            Serial.println("[handlePiecePlacement] -> CANCEL branch");
             resetMovePhase();
             return;
         }
