@@ -40,7 +40,6 @@ void GameManager::updateInitialization(uint64_t sensorState) {
     sensorOccupancy = sensorState;
 
     // Sync LEDs - unlight squares with pieces
-    syncLEDsFromSensors(sensorOccupancy);
     lightAllStartingSquares(sensorState);
 
     // Count pieces detected

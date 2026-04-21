@@ -25,7 +25,6 @@ void highlightSquare(uint8_t row, uint8_t col, uint32_t color);
 void highlightLegalMoves(Chess::Square from, Chess::Board& board);
 
 void lightAllStartingSquares(uint64_t sensorOccupancy = 0);
-void syncLEDsFromSensors(uint64_t sensorOccupancy);
 
 // Mapping configuration
 void setLEDMapping(uint8_t expander, uint8_t pin, uint8_t row, uint8_t col);

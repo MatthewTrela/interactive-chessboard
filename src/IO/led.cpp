@@ -221,21 +221,6 @@ void lightAllStartingSquares(uint64_t sensorOccupancy) {
     flushLEDBuffer();
 }
 
-void syncLEDsFromSensors(uint64_t sensorOccupancy) {
-    // Unlight squares where pieces are detected
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-            uint8_t sq = row * 8 + col;
-            bool hasPiece = (sensorOccupancy >> sq) & 1ULL;
-
-            if (hasPiece) {
-                setLED(row, col, 0x000000);
-            }
-        }
-    }
-    flushLEDBuffer();
-}
-
 void clearAllLEDs() {
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
