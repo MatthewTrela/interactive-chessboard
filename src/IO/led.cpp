@@ -130,11 +130,11 @@ void syncLEDsFromInputState() {
 }
 
 // ========== BUFFER FLUSHING ==========
-void flushLEDBuffer() {
+void flushLEDBuffer(bool force) {
     unsigned long now = millis();
 
     // throttle update
-    if (now - lastFlushTime < LED_MIN_FLUSH_MS) {
+    if (!force && now - lastFlushTime < LED_MIN_FLUSH_MS) {
         return;
     }
 
