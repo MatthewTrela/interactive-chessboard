@@ -1,7 +1,8 @@
 #include "game_manager.h"
-#include "global.h"
+
 #include "IO/display_manager.h"
 #include "IO/led.h"
+#include "global.h"
 
 GameManager game;
 
@@ -155,7 +156,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
 
         int playerIndex = (sideToMove == Chess::ChessColor::White) ? 0 : 1;
         if (players[playerIndex].showLegalMoves) {
-            // TODO: highlight legal destination squares for attackingSquare
+            highlightLegalMoves(attackingSquare, currentBoard);
         }
         return;
     }
@@ -252,6 +253,8 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
     if (movePhase == MovePhase::ATTACKER_LIFTED) {
         // cancel move
         if (sq == attackingSquare) {
+            clearAllLEDs();
+            flushLEDBuffer();
             resetMovePhase();
             return;
         }

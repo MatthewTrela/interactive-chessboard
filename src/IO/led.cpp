@@ -226,7 +226,6 @@ void clearAllLEDs() {
         for (int col = 0; col < 8; col++) {
             ledBuffer[row][col] = 0x000000;
             ledDirty[row][col] = true;
-            // setLED(row, col, 0x000000);
         }
     }
 }
