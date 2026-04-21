@@ -253,7 +253,6 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
     if (movePhase == MovePhase::ATTACKER_LIFTED) {
         // cancel move
         if (sq == attackingSquare) {
-            clearAllLEDs();
             resetMovePhase();
             return;
         }

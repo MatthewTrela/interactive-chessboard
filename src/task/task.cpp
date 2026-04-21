@@ -22,13 +22,16 @@ void gameLoopTask(void* pvParameters) {
                 game.updateInitialization(newOccupancy);
                 break;
             case SystemState::PLAYING:
+                Serial.println("We in playing");
                 game.updateBoard(newOccupancy);
                 break;
             case SystemState::ERROR_RECOVERY:
                 // TODO: show error on OLED
+                Serial.println("We in error");
                 break;
             case SystemState::GAME_OVER:
                 // TODO: show game over
+                Serial.println("We in game over");
                 break;
             default:
                 break;
