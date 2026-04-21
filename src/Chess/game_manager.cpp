@@ -9,7 +9,7 @@ GameManager game;
 GameManager::GameManager() {
     currentState = SystemState::MAIN_MENU;
     sensorOccupancy = 0;
-    lastProcessedBoard = ~0ULL;
+    lastDebouncedBoard = ~0ULL;
     debounceStartTime = 0;
     resetMovePhase();
 }
