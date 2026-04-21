@@ -41,6 +41,7 @@ void GameManager::updateInitialization(uint64_t sensorState) {
 
     // Sync LEDs - unlight squares with pieces
     syncLEDsFromSensors(sensorOccupancy);
+    lightAllStartingSquares(sensorState);
 
     // Count pieces detected
     int pieceCount = Chess::BitUtils::countBits(sensorOccupancy);
