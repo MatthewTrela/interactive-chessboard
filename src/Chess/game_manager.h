@@ -60,6 +60,7 @@ class GameManager {
 
     // sensor state tracking
     Chess::Bitboard sensorOccupancy;
+    Chess::Bitboard lastProcessedBoard;
 
     // move phase state machine
     MovePhase movePhase;
@@ -98,7 +99,6 @@ class GameManager {
     /// Returns true if any legal move captures a piece on `targetSq`.
     // bool squareIsCaptureTarget(Chess::Square targetSq) const;
     void checkGameEndConditions();
-
 };
 
 extern GameManager game;
