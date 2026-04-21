@@ -11,7 +11,6 @@ GameManager::GameManager() {
     sensorOccupancy = 0;
     lastDebouncedBoard = ~0ULL;
     debounceStartTime = 0;
-    resetMovePhase();
 }
 
 void GameManager::init() {
