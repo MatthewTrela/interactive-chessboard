@@ -22,7 +22,7 @@ void GameManager::init() {
     currentBoard.reset();
 
     // set sensor occupancy to starting position
-    sensorOccupancy = 0;
+    sensorOccupancy = readBoardBitmap();
 
     // Set initial user settings
     players[0] = PlayerSettings{false, false};
@@ -30,7 +30,7 @@ void GameManager::init() {
 
     currentState = SystemState::INIT;
     resetMovePhase();
-    lightAllStartingSquares();
+    lightAllStartingSquares(sensorOccupancy);
 }
 
 // Public methods
