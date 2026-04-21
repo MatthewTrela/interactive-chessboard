@@ -98,7 +98,7 @@ void DisplayManager::showPickedUpPiece(Chess::PieceType piece, Chess::ChessColor
     printMessage(playerID, 1, colorStr + " " + pieceTypeName(piece), true);
 }
 
-void DisplayManager::drawGrid(int playerID) {
+void DisplayManager::drawGrid(int playerID, uint64_t boardState) {
     Adafruit_SSD1306 *display;
     if (playerID == 1) {
         display = &displayP1;
@@ -106,7 +106,6 @@ void DisplayManager::drawGrid(int playerID) {
         display = &displayP2;
     }
 
-    uint64_t boardState = readBoardBitmap();
     display->clearDisplay();
 
     // Draw title
@@ -124,7 +123,7 @@ void DisplayManager::drawGrid(int playerID) {
 
     for (uint8_t row = 0; row < 8; row++) {
         for (uint8_t col = 0; col < 8; col++) {
-            bool pressed = (~boardState & (1ULL << ((row * 8) + col))) != 0;
+            bool pressed = (boardState & (1ULL << ((row * 8) + col))) != 0;
 
             uint8_t x = GRID_START_X + col * CELL_WITH_GAP;
             uint8_t y = GRID_START_Y + (7 - row) * CELL_WITH_GAP;  // flip Y so row 0 = top

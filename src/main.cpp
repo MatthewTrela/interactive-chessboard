@@ -20,7 +20,6 @@ void setup() {
     Serial.println("Hello from ESP32-S3!");
     // Initialize all global objects
     initGlobals();
-    game.init();
 
     if (!uiManager->begin()) {
         Serial.println("OLEDs failed to initialize!");
@@ -28,14 +27,13 @@ void setup() {
 
     // Initialize peripherals
     initLEDs();
-    initExpanders(true);
-
-    // Draw on OLEDs
-    uiManager->drawGrid(1);
-    uiManager->drawGrid(2);
+    initExpanders(false);
 
     // set initial led state
     syncLEDsFromInputState();
+
+    //Init game state
+    game.init();
 
     // Setup tasks
     initTasks();

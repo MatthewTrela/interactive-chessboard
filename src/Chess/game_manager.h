@@ -4,7 +4,7 @@
 
 #include "chess.hpp"
 
-enum class SystemState { MAIN_MENU, PLAYING, ERROR_RECOVERY, GAME_OVER };
+enum class SystemState { MAIN_MENU, INIT, PLAYING, ERROR_RECOVERY, GAME_OVER };
 
 struct PlayerSettings {
     bool showBestMove;
@@ -38,6 +38,8 @@ class GameManager {
     // reset to starting position
     void init();
 
+    void updateInitialization(uint64_t sensorState);
+
     /// Called whenever a hall-effect / reed switch changes state.
     /// @param newBoard  64-bit occupancy bitmask reflecting the current
     ///                  physical board (1 = piece present, LSB = A1).
@@ -48,6 +50,7 @@ class GameManager {
     void setSettings(uint8_t playerNum, bool showBestMove, bool showLegalMoves);
 
     Chess::Board& getBoard();
+    SystemState getState();
 
    private:
     // game state
@@ -95,6 +98,7 @@ class GameManager {
     /// Returns true if any legal move captures a piece on `targetSq`.
     // bool squareIsCaptureTarget(Chess::Square targetSq) const;
     void checkGameEndConditions();
+
 };
 
 extern GameManager game;

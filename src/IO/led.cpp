@@ -171,10 +171,72 @@ void flushLEDBuffer() {
 }
 
 // ========== BULK OPERATIONS ==========
+void highlightSquare(uint8_t row, uint8_t col, uint32_t color) {
+    if (row < 0 || col < 0 || row >= 8 || col >= 8) return;
+    ledBuffer[row][col] = color;
+    ledDirty[row][col] = true;
+}
+
+void highlightLegalMoves(Chess::Square from, Chess::Board& board) {
+    clearAllLEDs();
+
+    // highlight lifted piece
+    uint8_t fromRow = from / 8;
+    uint8_t fromCol = from % 8;
+    highlightSquare(fromRow, fromCol, LIFTED_PIECE_COLOR);
+
+    Chess::MoveList moves;
+    board.generateLegalMoves(moves);
+
+    for (size_t i = 0; i < moves.size(); i++) {
+        if (moves[i].getFrom() != from) continue;
+
+        Chess::Square to = moves[i].getTo();
+        uint8_t row = to / 8;
+        uint8_t col = to % 8;
+
+        uint32_t color = moves[i].isCapture() ? LEGAL_CAPTURE_COLOR : LEGAL_MOVE_COLOR;
+        highlightSquare(row, col, color);
+    }
+
+    flushLEDBuffer();
+}
+
+void lightAllStartingSquares() {
+    delay(10);
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            if (row <= 1) {
+                setLED(row, col, WHITE);
+            } else if (row >= 6) {
+                setLED(row, col, RED);
+            }
+        }
+    }
+    flushLEDBuffer();
+}
+
+void syncLEDsFromSensors(uint64_t sensorOccupancy) {
+    // Unlight squares where pieces are detected
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            uint8_t sq = row * 8 + col;
+            bool hasPiece = (sensorOccupancy >> sq) & 1ULL;
+
+            if (hasPiece) {
+                setLED(row, col, 0x000000);
+            }
+        }
+    }
+    flushLEDBuffer();
+}
+
 void clearAllLEDs() {
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
-            setLED(row, col, 0x000000);
+            ledBuffer[row][col] = 0x000000;
+            ledDirty[row][col] = true;
+            // setLED(row, col, 0x000000);
         }
     }
 }

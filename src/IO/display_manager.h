@@ -30,7 +30,7 @@ public:
     void updateDisplays();
     void printMessage(int playerID, int line, const String& message, bool instantUpdate = false);
     void showPickedUpPiece(Chess::PieceType piece, Chess::ChessColor color);
-    void drawGrid(int playerID);
+    void drawGrid(int playerID, uint64_t boardState);
 
 
 private:

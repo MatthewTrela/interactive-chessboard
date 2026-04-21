@@ -1,6 +1,7 @@
 #include "game_manager.h"
 #include "global.h"
 #include "IO/display_manager.h"
+#include "IO/led.h"
 
 GameManager game;
 
@@ -21,17 +22,49 @@ void GameManager::init() {
     currentBoard.reset();
 
     // set sensor occupancy to starting position
-    sensorOccupancy = currentBoard.getOccupancy();
+    sensorOccupancy = 0;
 
     // Set initial user settings
     players[0] = PlayerSettings{false, false};
     players[1] = PlayerSettings{false, false};
 
-    currentState = SystemState::PLAYING;
+    currentState = SystemState::INIT;
     resetMovePhase();
+    lightAllStartingSquares();
 }
 
 // Public methods
+
+void GameManager::updateInitialization(uint64_t sensorState) {
+    // Update sensor occupancy
+    sensorOccupancy = sensorState;
+
+    // Sync LEDs - unlight squares with pieces
+    syncLEDsFromSensors(sensorOccupancy);
+
+    // Count pieces detected
+    int pieceCount = Chess::BitUtils::countBits(sensorOccupancy);
+
+    Serial.printf("Pieces placed: %d/32\n", pieceCount);
+
+    // Check if all 32 pieces are in starting position
+    if (pieceCount == 32) {
+        // Verify pieces are in correct squares
+        Chess::Bitboard expectedOccupancy = currentBoard.getOccupancy();
+        if (sensorOccupancy == expectedOccupancy) {
+            currentState = SystemState::PLAYING;
+            Serial.println("All pieces detected! Game starting...");
+            clearAllLEDs();
+            flushLEDBuffer();
+        } else {
+            Serial.println("Warning: 32 pieces detected but positions don't match!");
+            // Still start if 32 pieces are placed (board might be in different valid position)
+            currentState = SystemState::PLAYING;
+            clearAllLEDs();
+            flushLEDBuffer();
+        }
+    }
+}
 
 void GameManager::updateBoard(uint64_t newBoard) {
     // check if piece picked up or put down
@@ -434,3 +467,4 @@ void GameManager::setSettings(uint8_t playerNum, bool showBestMove, bool showLeg
 }
 
 Chess::Board& GameManager::getBoard() { return currentBoard; }
+SystemState GameManager::getState() { return currentState; }

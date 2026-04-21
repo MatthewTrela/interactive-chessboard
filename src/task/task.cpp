@@ -3,6 +3,7 @@
 #include "Chess/game_manager.h"
 #include "IO/io_expander.h"
 #include "global.h"
+#include "IO/display_manager.h"
 
 TaskHandle_t GameLoopTaskHandle = NULL;
 TaskHandle_t UITaskHandle = NULL;
@@ -10,13 +11,28 @@ TaskHandle_t EngineTaskHandle = NULL;
 
 void gameLoopTask(void* pvParameters) {
     for (;;) {
-        poll();
-        // ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
         uint64_t newOccupancy = readBoardBitmap();
-        // uiManager->drawGrid(1);
-        // uiManager->drawGrid(2);
-        game.updateBoard(newOccupancy);
-        vTaskDelay(pdMS_TO_TICKS(10));
+        uiManager->drawGrid(1, newOccupancy);
+        uiManager->drawGrid(2, newOccupancy);
+
+        switch (game.getState()) {
+            case SystemState::INIT:
+                game.updateInitialization(newOccupancy);
+                break;
+            case SystemState::PLAYING:
+                game.updateBoard(newOccupancy);
+                break;
+            case SystemState::ERROR_RECOVERY:
+                // TODO: show error on OLED
+                break;
+            case SystemState::GAME_OVER:
+                // TODO: show game over
+                break;
+            default:
+                break;
+        }
     }
 }
 
