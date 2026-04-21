@@ -18,7 +18,7 @@ void initLEDs();
 void setLED(uint8_t row, uint8_t col, uint32_t color);
 void setLEDFromInput(uint8_t expander, uint8_t pin, bool state);
 void syncLEDsFromInputState();
-void flushLEDBuffer();
+void flushLEDBuffer(bool force = false);
 void clearAllLEDs();
 void setAllLEDs(uint32_t color);
 void highlightSquare(uint8_t row, uint8_t col, uint32_t color);
