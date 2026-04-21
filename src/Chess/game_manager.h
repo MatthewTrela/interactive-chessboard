@@ -60,7 +60,9 @@ class GameManager {
 
     // sensor state tracking
     Chess::Bitboard sensorOccupancy;
-    Chess::Bitboard lastProcessedBoard;
+    Chess::Bitboard lastDebouncedBoard;
+    unsigned long debounceStartTime;
+    static constexpr unsigned long DEBOUNCE_MS = 50;
 
     // move phase state machine
     MovePhase movePhase;

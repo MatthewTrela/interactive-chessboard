@@ -10,6 +10,7 @@ GameManager::GameManager() {
     currentState = SystemState::MAIN_MENU;
     sensorOccupancy = 0;
     lastProcessedBoard = ~0ULL;
+    debounceStartTime = 0;
     resetMovePhase();
 }
 
@@ -70,9 +71,24 @@ void GameManager::updateInitialization(uint64_t sensorState) {
 
 void GameManager::updateBoard(uint64_t newBoard) {
     // debounce
-    if (newBoard == lastProcessedBoard) {
+    if (newBoard == lastDebouncedBoard) {
+        debounceStartTime = 0;
         return;
     }
+
+    // change detected, start timer
+    if (debounceStartTime == 0) {
+        debounceStartTime = millis();
+        return;
+    }
+
+    // needs to be in different state for long enough
+    if (millis() - debounceStartTime < DEBOUNCE_MS) {
+        return;
+    }
+
+    lastDebouncedBoard = static_cast<Chess::Bitboard>(newBoard);
+    debounceStartTime = 0;
 
     // check if piece picked up or put down
     Chess::Bitboard diffBoard = sensorOccupancy ^ static_cast<Chess::Bitboard>(newBoard);
@@ -94,7 +110,6 @@ void GameManager::updateBoard(uint64_t newBoard) {
     } else {
         handlePiecePlacement(changedSq);
     }
-    lastProcessedBoard = static_cast<Chess::Bitboard>(newBoard);
 }
 
 // sensor helper
