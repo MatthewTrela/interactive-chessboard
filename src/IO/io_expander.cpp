@@ -109,19 +109,19 @@ uint64_t checkAllExpandersForInterrupt() {
         if (!expanderOnline[i]) continue;
 
         uint16_t intf = expanders[i]->getInterruptFlagRegister();
-        uint16_t currentValue = expanderState.expander[i];
+        // uint16_t currentValue = expanderState.expander[i];
 
         if (intf != 0) {
             uint16_t newValue = readWithDebounce(expanders[i]);
             if (newValue != expanderState.expander[i]) {
                 processStateChange(i, newValue);
-                currentValue = newValue;
+                // currentValue = newValue;
                 Serial.printf("Expander %d changed: 0x%04X\n", i, newValue);
             }
         }
 
         expanderState.expander[i] = expanders[i]->read16();
-        currentValue = expanderState.expander[i];
+        uint16_t currentValue = expanderState.expander[i];
 
         uint64_t occupied = (~(uint64_t)currentValue) & 0xFFFF;
         newOccupancy |= (occupied << (i * 16));
