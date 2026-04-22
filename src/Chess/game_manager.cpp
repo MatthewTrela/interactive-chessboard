@@ -60,10 +60,6 @@ void GameManager::updateInitialization(uint64_t sensorState) {
             flushLEDBuffer();
         } else {
             Serial.println("Warning: 32 pieces detected but positions don't match!");
-            // Still start if 32 pieces are placed (board might be in different valid position)
-            currentState = SystemState::PLAYING;
-            clearAllLEDs();
-            flushLEDBuffer();
         }
     }
 }
@@ -71,18 +67,21 @@ void GameManager::updateInitialization(uint64_t sensorState) {
 void GameManager::updateBoard(uint64_t newBoard) {
     // debounce
     if (newBoard == lastDebouncedBoard) {
+        Serial.println("Failed debounce");
         debounceStartTime = 0;
         return;
     }
 
     // change detected, start timer
     if (debounceStartTime == 0) {
+        Serial.println("Debounce exit");
         debounceStartTime = millis();
         return;
     }
 
     // needs to be in different state for long enough
     if (millis() - debounceStartTime < DEBOUNCE_MS) {
+        Serial.println("Not in different state long enough");
         return;
     }
 
@@ -286,8 +285,6 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         if (sq == attackingSquare) {
             Serial.println("[handlePiecePlacement] -> CANCEL branch");
             resetMovePhase();
-            clearAllLEDs();
-            flushLEDBuffer(true);
             return;
         }
 
@@ -389,6 +386,8 @@ void GameManager::resetMovePhase() {
     kingToSquare = Chess::SQ_NONE;
     kingPlaced = false;
     rookPlaced = false;
+    clearAllLEDs();
+    flushLEDBuffer(true);
 }
 
 bool GameManager::findLegalMove(Chess::Square from, Chess::Square to, Chess::Move& out) const {

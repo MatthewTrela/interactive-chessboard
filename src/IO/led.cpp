@@ -195,7 +195,14 @@ void highlightLegalMoves(Chess::Square from, Chess::Board& board) {
         uint8_t row = to / 8;
         uint8_t col = to % 8;
 
-        uint32_t color = moves[i].isCapture() ? LEGAL_CAPTURE_COLOR : LEGAL_MOVE_COLOR;
+        uint32_t color;
+        if (moves[i].getFlags() == 2 || moves[i].getFlags() == 3) {
+            color = CASTLING_COLOR;
+        } else if (moves[i].isCapture()) {
+            color = LEGAL_CAPTURE_COLOR;
+        } else {
+            color = LEGAL_MOVE_COLOR;
+        }
         highlightSquare(row, col, color);
     }
 

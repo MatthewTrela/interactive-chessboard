@@ -51,6 +51,7 @@ class GameManager {
 
     Chess::Board& getBoard();
     SystemState getState();
+    bool isDebouncing() const { return debounceStartTime != 0; }
 
    private:
     // game state
@@ -62,7 +63,6 @@ class GameManager {
     Chess::Bitboard sensorOccupancy;
     Chess::Bitboard lastDebouncedBoard;
     unsigned long debounceStartTime;
-    static constexpr unsigned long DEBOUNCE_MS = 50;
 
     // move phase state machine
     MovePhase movePhase;

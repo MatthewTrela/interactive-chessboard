@@ -44,6 +44,7 @@ class DisplayManager;
 #define MCP_ADDR_4 3  // 011
 
 #define MCP_DEBOUNCE_DELAY_MS 15
+#define DEBOUNCE_MS 50
 
 // OLED
 #define OLED_ADDRESS 0x3C
@@ -64,8 +65,9 @@ class DisplayManager;
 #define NUM_LEDS 64
 #define LED_BRIGHTNESS 255
 #define LEGAL_MOVE_COLOR 0x0000FF     // blue
-#define LEGAL_CAPTURE_COLOR 0xFF8800  // orange
+#define LEGAL_CAPTURE_COLOR 0xFF6600  // orange
 #define LIFTED_PIECE_COLOR 0xFFFFFF   // white
+#define CASTLING_COLOR 0xBF00FF       // PURPLE
 #define WHITE 0xFFFFFF                // white
 #define RED 0xFF0000                  // red
 

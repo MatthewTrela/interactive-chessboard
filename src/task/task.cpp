@@ -11,7 +11,11 @@ TaskHandle_t EngineTaskHandle = NULL;
 
 void gameLoopTask(void* pvParameters) {
     for (;;) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        TickType_t waitTime = game.isDebouncing()
+            ? pdMS_TO_TICKS(DEBOUNCE_MS)
+            : portMAX_DELAY;
+
+        ulTaskNotifyTake(pdTRUE, waitTime);
 
         uint64_t newOccupancy = readBoardBitmap();
         uiManager->drawGrid(1, newOccupancy);
