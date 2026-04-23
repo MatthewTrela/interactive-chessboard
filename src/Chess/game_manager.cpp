@@ -148,8 +148,7 @@ void GameManager::updateSensorOccupancy(Chess::Square sq, bool occupied) {
 void GameManager::handlePiecePickup(Chess::Square sq) {
     // CASTLING_BOTH_LIFTED: both pieces already in hand
     // No further pickups are valid; player should be placing pieces now.
-    if (movePhase == MovePhase::CASTLING_BOTH_LIFTED || movePhase == MovePhase::CASTLING_ONE_PLACED ||
-        movePhase == MovePhase::CAPTURED_REMOVED) {
+    if (movePhase == MovePhase::CASTLING_BOTH_LIFTED || movePhase == MovePhase::CAPTURED_REMOVED) {
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
@@ -160,6 +159,105 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
         if (sq == capturedSquare) {
             // Captured pawn removed — the move is now fully committed.
             executeMove(pendingMove);
+        } else {
+            currentState = SystemState::ERROR_RECOVERY;
+        }
+        return;
+    }
+
+    // CASTLING_ROOK_PLACED: rook is already on its destination square.
+    // The only valid pickup is the king from its origin.
+    if (movePhase == MovePhase::CASTLING_ROOK_PLACED) {
+        if (sq == attackingSquare) {
+            // King lifted — rook is already on its destination, king now in hand.
+            Serial.printf("[CASTLING_ROOK_PLACED] King lifted at sq=%d\n", sq);
+
+            movePhase = MovePhase::CASTLING_KING_LIFTED;
+            rookPlaced = true;  // rook is already on rookToSquare
+            kingPlaced = false;
+
+            // Highlight only king destination (rook is already placed)
+            clearAllLEDs();
+            highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+            highlightSquare(attackingSquare / 8, attackingSquare % 8, CASTLING_COLOR);
+            flushLEDBuffer();
+        } else if (sq == rookToSquare) {
+            // Player picked the rook back up from its destination — cancel back to rook lifted.
+            Serial.printf("[CASTLING_ROOK_PLACED] Rook picked back up, reverting to CASTLING_ROOK_LIFTED\n");
+            movePhase = MovePhase::CASTLING_ROOK_LIFTED;
+
+            int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
+            if (players[playerIndex].showLegalMoves) {
+                clearAllLEDs();
+                highlightSquare(attackingSquare / 8, attackingSquare % 8, LIFTED_PIECE_COLOR);
+                highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+                highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+                flushLEDBuffer();
+            }
+
+        } else {
+            currentState = SystemState::ERROR_RECOVERY;
+        }
+
+        return;
+    }
+
+    // CASTLING_KING_PLACED: king is already on its destination square.
+
+    // The only valid pickup is the rook from its origin.
+    if (movePhase == MovePhase::CASTLING_KING_PLACED) {
+        if (sq == rookFromSquare) {
+            // Rook lifted — rook in hand, king already on its destination.
+            // Use CASTLING_BOTH_LIFTED with kingPlaced=true so the placement
+            // handler knows only the rook needs to land.
+            Serial.printf("[CASTLING_KING_PLACED] Rook lifted at sq=%d\n", sq);
+            movePhase = MovePhase::CASTLING_BOTH_LIFTED;
+
+            kingPlaced = true;
+            rookPlaced = false;
+
+            clearAllLEDs();
+            highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+            flushLEDBuffer();
+        } else if (sq == kingToSquare) {
+            // Player picked the king back up from its destination — back to king-in-hand state.
+            Serial.printf("[CASTLING_KING_PLACED] King picked back up, reverting to CASTLING_KING_LIFTED\n");
+            movePhase = MovePhase::CASTLING_KING_LIFTED;
+
+            kingPlaced = false;
+            rookPlaced = false;
+
+            int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
+            if (players[playerIndex].showLegalMoves) {
+                clearAllLEDs();
+                highlightSquare(rookFromSquare / 8, rookFromSquare % 8, LIFTED_PIECE_COLOR);
+                highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+                highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+                flushLEDBuffer();
+            }
+        } else {
+            currentState = SystemState::ERROR_RECOVERY;
+        }
+        return;
+    }
+
+    // CASTLING_KING_LIFTED: king in hand
+    // Only valid pickup from here is the rook.
+    if (movePhase == MovePhase::CASTLING_KING_LIFTED) {
+        if (sq == rookFromSquare) {
+            Serial.printf("[CASTLING_KING_LIFTED] Rook lifted at sq=%d, both in hand\n", sq);
+            movePhase = MovePhase::CASTLING_BOTH_LIFTED;
+
+            kingPlaced = false;
+            rookPlaced = false;
+
+            int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
+            if (players[playerIndex].showLegalMoves) {
+                clearAllLEDs();
+                highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+                highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+                flushLEDBuffer();
+            }
         } else {
             currentState = SystemState::ERROR_RECOVERY;
         }
@@ -335,16 +433,88 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
     }
 
     // CASTLING_ROOK_LIFTED: rook is in hand, king hasn't been lifted yet.
-    // Only the rook may be placed back on its origin (cancel), or it's an error.
+    // Either put on destination or cancel
     if (movePhase == MovePhase::CASTLING_ROOK_LIFTED) {
         if (sq == rookFromSquare) {
-            Serial.printf("[CASTLING_ROOK_LIFTED] Rook returned to origin sq=%d, cancelling\n", sq);
-            // Player changed their mind; cancel the castling initiation.
+            Serial.printf("[CASTLING_ROOK_LIFTED] Rook returned to origin, cancelling\n");
             resetMovePhase();
             return;
         }
-        Serial.printf("[CASTLING_ROOK_LIFTED] ERROR: placement on sq=%d while rook in hand (rookFrom=%d)\n", sq,
-                      rookFromSquare);
+        if (sq == rookToSquare) {
+            Serial.printf("[CASTLING_ROOK_LIFTED] Rook placed on sq=%d (method 2: rook first), waiting for king\n", sq);
+            movePhase = MovePhase::CASTLING_ROOK_PLACED;
+            // Clear rook destination highlight; king destination remains to guide player
+            clearAllLEDs();
+            highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+            flushLEDBuffer();
+            return;
+        }
+        Serial.printf("[CASTLING_ROOK_LIFTED] ERROR: placement on sq=%d (rookFrom=%d, rookTo=%d, kingTo=%d)\n", sq,
+                      rookFromSquare, rookToSquare, kingToSquare);
+        currentState = SystemState::ERROR_RECOVERY;
+        return;
+    }
+
+    // CASTLING_ROOK_PLACED: rook on dest square, king on board
+    if (movePhase == MovePhase::CASTLING_ROOK_PLACED) {
+        Serial.printf("[CASTLING_ROOK_PLACED] ERROR: unexpected placement on sq=%d\n", sq);
+        currentState = SystemState::ERROR_RECOVERY;
+        return;
+    }
+
+    // CASTLING_KING_LIFTED: king is in hand, reached via:
+    //   - CASTLING_ROOK_PLACED (rook already on dest, rookPlaced=true)
+    //   - CASTLING_KING_PLACED king-picked-back-up (rookPlaced=false)
+    // rookPlaced=true means the rook is already on rookToSquare.
+    if (movePhase == MovePhase::CASTLING_KING_LIFTED) {
+        if (sq == attackingSquare) {
+            if (rookPlaced) {
+                // Rook is already on its destination; king returned to origin.
+                // Revert to CASTLING_ROOK_PLACED so the player can pick the rook back up to fully cancel.
+                Serial.printf(
+                    "[CASTLING_KING_LIFTED] King returned to origin; rook on dest, reverting to "
+                    "CASTLING_ROOK_PLACED\n");
+                movePhase = MovePhase::CASTLING_ROOK_PLACED;
+
+                clearAllLEDs();
+                highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+                flushLEDBuffer();
+            } else {
+                // Rook hasn't moved — full cancel.
+                Serial.printf("[CASTLING_KING_LIFTED] King returned to origin, cancelling\n");
+                resetMovePhase();
+            }
+            return;
+        }
+        if (sq == kingToSquare) {
+            if (rookPlaced) {
+                // Rook is already on rookToSquare; king now on kingToSquare — castle complete!
+                Serial.printf(
+                    "[CASTLING_KING_LIFTED] King placed on sq=%d with rook already placed, executing castle\n", sq);
+                executeMove(pendingMove);
+            } else {
+                // Rook hasn't moved yet; wait for it.
+                Serial.printf("[CASTLING_KING_LIFTED] King placed on sq=%d, waiting for rook\n", sq);
+                movePhase = MovePhase::CASTLING_KING_PLACED;
+
+                kingPlaced = true;
+                rookPlaced = false;
+
+                clearAllLEDs();
+                highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+                flushLEDBuffer();
+            }
+            return;
+        }
+        Serial.printf("[CASTLING_KING_LIFTED] ERROR: placement on sq=%d\n", sq);
+        currentState = SystemState::ERROR_RECOVERY;
+        return;
+    }
+
+    // CASTLING_KING_PLACED: king is on its destination, waiting for rook to be
+    // picked up (handled in handlePiecePickup). No placement is valid here.
+    if (movePhase == MovePhase::CASTLING_KING_PLACED) {
+        Serial.printf("[CASTLING_KING_PLACED] ERROR: unexpected placement on sq=%d — pick up the rook first\n", sq);
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
@@ -357,10 +527,44 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
             return;
         }
 
-        // skipped lifting opponent piece (shouldn't be physically possible)
-        if (currentBoard.pieceAt(sq) != Chess::PieceType::None) {
-            currentState = SystemState::ERROR_RECOVERY;
-            return;
+        // check for castling
+        if (currentBoard.pieceAt(attackingSquare) == Chess::PieceType::King) {
+            if (sq == Chess::SQ_G1 || sq == Chess::SQ_G8 || sq == Chess::SQ_C1 || sq == Chess::SQ_C8) {
+                Chess::Move castleMove;
+                if (!findLegalMove(attackingSquare, sq, castleMove)) {
+                    currentState = SystemState::ERROR_RECOVERY;
+                    return;
+                }
+                uint16_t flag = castleMove.getFlags();
+                if (flag < 2 || flag > 3) {
+                    currentState = SystemState::ERROR_RECOVERY;
+                    return;
+                }
+
+                // Resolve rook squares from the castle flag
+                Chess::ChessColor side = currentBoard.getSideToMove();
+                bool isWhite = (side == Chess::ChessColor::White);
+                if (flag == 2) {  // kingside
+                    rookFromSquare = isWhite ? Chess::SQ_H1 : Chess::SQ_H8;
+                    rookToSquare = isWhite ? Chess::SQ_F1 : Chess::SQ_F8;
+                    kingToSquare = isWhite ? Chess::SQ_G1 : Chess::SQ_G8;
+                } else {  // queenside
+                    rookFromSquare = isWhite ? Chess::SQ_A1 : Chess::SQ_A8;
+                    rookToSquare = isWhite ? Chess::SQ_D1 : Chess::SQ_D8;
+                    kingToSquare = isWhite ? Chess::SQ_C1 : Chess::SQ_C8;
+                }
+
+                Serial.printf("[ATTACKER_LIFTED] King placed on castling square sq=%d, flag=%d\n", sq, flag);
+                pendingMove = castleMove;
+                kingPlaced = true;
+                rookPlaced = false;
+                movePhase = MovePhase::CASTLING_KING_PLACED;
+                // Highlight rook destination (only step remaining)
+                clearAllLEDs();
+                highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+                flushLEDBuffer();
+                return;
+            }
         }
 
         // Check if this is an en passant destination placed before the captured
@@ -413,40 +617,39 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
 
     // CASTLING_BOTH_LIFTED
     if (movePhase == MovePhase::CASTLING_BOTH_LIFTED) {
-        if (sq == kingToSquare) {
+        if (!kingPlaced && sq == kingToSquare) {
+            // King placed first; rook still in hand.
+            Serial.printf("[CASTLING_BOTH_LIFTED] King placed on sq=%d, waiting for rook\n", sq);
             kingPlaced = true;
             rookPlaced = false;
-            movePhase = MovePhase::CASTLING_ONE_PLACED;
+            movePhase = MovePhase::CASTLING_KING_PLACED;
+
+            // Clear king destination highlight; rook destination stays
+            clearAllLEDs();
+            highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+            flushLEDBuffer();
             return;
         }
-        if (sq == rookToSquare) {
-            rookPlaced = true;
-            kingPlaced = false;
-            movePhase = MovePhase::CASTLING_ONE_PLACED;
+        if (!rookPlaced && sq == rookToSquare) {
+            // Rook placed first (or completing when king already placed).
+            if (kingPlaced) {
+                // King was already placed and we just placed the rook — castle complete.
+                Serial.printf("[CASTLING_BOTH_LIFTED] Rook placed on sq=%d, castle complete\n", sq);
+                executeMove(pendingMove);
+            } else {
+                Serial.printf("[CASTLING_BOTH_LIFTED] Rook placed on sq=%d, waiting for king\n", sq);
+                rookPlaced = true;
+                kingPlaced = false;
+                movePhase = MovePhase::CASTLING_ROOK_PLACED;
+
+                clearAllLEDs();
+                highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+                flushLEDBuffer();
+            }
             return;
         }
         // Placed on an unexpected square.
         currentState = SystemState::ERROR_RECOVERY;
-        return;
-    }
-
-    // CASTLING_ONE_PLACED
-    if (movePhase == MovePhase::CASTLING_ONE_PLACED) {
-        if (kingPlaced) {
-            // Rook must be placed on rookToSquare.
-            if (sq != rookToSquare) {
-                currentState = SystemState::ERROR_RECOVERY;
-                return;
-            }
-        } else {
-            // Rook was placed first; king must come down on kingToSquare
-            if (sq != kingToSquare) {
-                currentState = SystemState::ERROR_RECOVERY;
-                return;
-            }
-        }
-
-        executeMove(pendingMove);
         return;
     }
 }

@@ -23,4 +23,4 @@ __pycache__/
 
 *_secrets.h
 
-*.ini
+platformio.ini

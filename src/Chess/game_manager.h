@@ -29,8 +29,10 @@ enum class MovePhase {
     CAPTURED_REMOVED,      // opponent piece lifted, attacker in hand: normal captures and en passant
     EP_ATTACKER_PLACED,    // en passant: attacker already placed on destination, waiting for captured pawn removal
     CASTLING_ROOK_LIFTED,  // castling initiated by lifting the rook first (king still on board)
+    CASTLING_KING_LIFTED,
     CASTLING_BOTH_LIFTED,  // King and correct rook both in hand
-    CASTLING_ONE_PLACED,   // one castling piece placed
+    CASTLING_ROOK_PLACED,
+    CASTLING_KING_PLACED,
 };
 
 class GameManager {
@@ -77,9 +79,8 @@ class GameManager {
     Chess::Square rookFromSquare;  // rook origin
     Chess::Square rookToSquare;    // rook destination
     Chess::Square kingToSquare;    // king destination
-    // Set when movePhase == CASTLING_ONE_PLACED
-    bool kingPlaced;
-    bool rookPlaced;
+    // Set during castling placement phase
+    bool kingPlaced, rookPlaced;
 
     // internal helper methods
     void updateSensorOccupancy(Chess::Square sq, bool occupied);
