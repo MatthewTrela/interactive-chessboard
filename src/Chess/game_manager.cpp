@@ -179,11 +179,14 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
     // CASTLING_ROOK_LIFTED: rook is already in hand, now waiting for the king.
     if (movePhase == MovePhase::CASTLING_ROOK_LIFTED) {
         if (!isOwnPiece || pieceType != Chess::PieceType::King) {
+            Serial.printf("[CASTLING_ROOK_LIFTED] ERROR: expected own King, got pieceType=%d isOwn=%d sq=%d\n",
+                          (int)pieceType, isOwnPiece, sq);
             currentState = SystemState::ERROR_RECOVERY;
             return;
         }
         // King lifted — both pieces now in hand.
         // attackingSquare (king origin) was stored by resolveCastleFromRook.
+        Serial.printf("[CASTLING_ROOK_LIFTED] King lifted at sq=%d, both pieces in hand\n", sq);
         movePhase = MovePhase::CASTLING_BOTH_LIFTED;
         return;
     }
@@ -200,6 +203,8 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
         // before the king — resolve the castle now if legal.
         if (pieceType == Chess::PieceType::Rook) {
             if (resolveCastleFromRook(sq)) {
+                Serial.printf("[IDLE] Rook-first castle: rookFrom=%d kingFrom=%d kingTo=%d rookTo=%d\n", rookFromSquare,
+                              attackingSquare, kingToSquare, rookToSquare);
                 movePhase = MovePhase::CASTLING_ROOK_LIFTED;
                 int playerIndex = (sideToMove == Chess::ChessColor::White) ? 0 : 1;
                 if (players[playerIndex].showLegalMoves) {
@@ -211,7 +216,8 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
                     flushLEDBuffer();
                 }
                 return;
-            }
+            } else
+                Serial.printf("[IDLE] Rook lifted at sq=%d but no legal castle found, treating as normal piece\n", sq);
             // Not a castling rook (or castle isn't legal)
         }
 
@@ -269,9 +275,14 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             }
 
             if (!resolveCastle(sq)) {
+                Serial.printf(
+                    "[ATTACKER_LIFTED] ERROR: own piece lifted at sq=%d but castle resolve failed (attacker=%d, "
+                    "pieceType=%d)\n",
+                    sq, attackingSquare, (int)pieceType);
                 currentState = SystemState::ERROR_RECOVERY;
                 return;
             }
+            Serial.printf("[ATTACKER_LIFTED] Castle resolved: kingTo=%d rookTo=%d\n", kingToSquare, rookToSquare);
 
             movePhase = MovePhase::CASTLING_BOTH_LIFTED;
 
@@ -327,10 +338,13 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
     // Only the rook may be placed back on its origin (cancel), or it's an error.
     if (movePhase == MovePhase::CASTLING_ROOK_LIFTED) {
         if (sq == rookFromSquare) {
+            Serial.printf("[CASTLING_ROOK_LIFTED] Rook returned to origin sq=%d, cancelling\n", sq);
             // Player changed their mind; cancel the castling initiation.
             resetMovePhase();
             return;
         }
+        Serial.printf("[CASTLING_ROOK_LIFTED] ERROR: placement on sq=%d while rook in hand (rookFrom=%d)\n", sq,
+                      rookFromSquare);
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
@@ -505,6 +519,7 @@ bool GameManager::findEnPassantMove(Chess::Square from, Chess::Square capturedPa
 }
 
 bool GameManager::resolveCastle(Chess::Square rookSq) {
+    Serial.print("called resolveCastle()");
     // Determine castling side from the rook square, then look for the
     // corresponding legal castle move (king moves two squares)
     Chess::ChessColor side = currentBoard.getSideToMove();
@@ -547,6 +562,7 @@ bool GameManager::resolveCastle(Chess::Square rookSq) {
         rookPlaced = false;
         return true;
     }
+    Serial.print("resolveCastle() returns false");
 
     return false;
 }
