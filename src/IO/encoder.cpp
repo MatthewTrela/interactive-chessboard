@@ -65,7 +65,7 @@ void IRAM_ATTR Encoder::handle(uint8_t idx) {
 
     int8_t movement = transitionTable[transition];
 
-    data[idx].delta += movement;
+    data[idx].steps += movement;
     data[idx].prevState = curr;
 
     portEXIT_CRITICAL_ISR(&mux);
@@ -80,49 +80,62 @@ void IRAM_ATTR Encoder::handleP1() { instance->handle(0); }
 void IRAM_ATTR Encoder::handleP2() { instance->handle(1); }
 
 void IRAM_ATTR Encoder::handleP1Button() {
+    if (digitalRead(ENCODER_P1_BUTTON) != LOW) return;
+
+    int64_t now = millis();
+    bool registered = false;
+    
     portENTER_CRITICAL_ISR(&instance->mux);
-    instance->data[0].buttonPressed = true;
+    if ((now - instance->data[0].lastButtonMs) >= BUTTON_DEBOUNCE_MS) {
+        instance->data[0].buttonPressed = true;
+        instance->data[0].lastButtonMs  = now;
+        registered = true;
+    }
     portEXIT_CRITICAL_ISR(&instance->mux);
-    notifyUITask();
+
+    if (registered) {
+        Serial.println("Button pressed");
+        notifyUITask();
+    }
 }
 
 void IRAM_ATTR Encoder::handleP2Button() {
+    if (digitalRead(ENCODER_P2_BUTTON) != LOW) return;
+
+    int64_t now = millis();
     portENTER_CRITICAL_ISR(&instance->mux);
-    instance->data[1].buttonPressed = true;
+    if ((now - instance->data[1].lastButtonMs) >= BUTTON_DEBOUNCE_MS) {
+        instance->data[1].buttonPressed = true;
+        instance->data[1].lastButtonMs  = now;
+    }
     portEXIT_CRITICAL_ISR(&instance->mux);
-    notifyUITask();
+    if (instance->data[1].buttonPressed) {
+        notifyUITask();
+    }
+    
 }
 
 EncoderData Encoder::getData(uint8_t player) {
     EncoderData result = {false, false, false};
     if (player > 1) return result;
 
-    int64_t now = esp_timer_get_time();
-
     portENTER_CRITICAL(&mux);
 
-    int32_t d = data[player].delta;
-    bool btn = data[player].buttonPressed;
-    int64_t lastConsumed = data[player].lastConsumedUs;
+    int32_t s   = data[player].steps;
+    bool    btn = data[player].buttonPressed;
 
-    bool spinReady = (d != 0) && ((now - lastConsumed) >= ENCODER_DEBOUNCE_US);
-
-    if (spinReady) {
-        data[player].delta = 0;
-        data[player].lastConsumedUs = now;
-    } else if (!spinReady && d != 0) {
-        d = 0;
+    if (s >= 4) {
+        data[player].steps -= 4;
+        result.rightSpin = true;
+    } else if (s <= -4) {
+        data[player].steps += 4;
+        result.leftSpin = true;
     }
 
-    if (btn) {
-        data[player].buttonPressed = false;
-    }
+    if (btn) data[player].buttonPressed = false;
 
     portEXIT_CRITICAL(&mux);
 
-    if (d > 0) result.rightSpin = true;
-    if (d < 0) result.leftSpin  = true;
     result.buttonPressed = btn;
-
     return result;
 }
