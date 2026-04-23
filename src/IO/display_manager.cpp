@@ -138,3 +138,35 @@ void DisplayManager::drawGrid(int playerID, uint64_t boardState) {
 
     display->display();
 }
+
+void DisplayManager::drawMainMenu(int playerID, MenuHighlight highlight) {
+    Adafruit_SSD1306* display = nullptr;
+    if      (playerID == 1) display = &displayP1;
+    else if (playerID == 2) display = &displayP2;
+    else return;
+
+    display->clearDisplay();
+    display->setTextSize(1);
+
+    struct { const char* label; uint8_t x; MenuHighlight val; } items[] = {
+        { "LEFT",   4,  MenuHighlight::Left   },
+        { "RIGHT",  46, MenuHighlight::Right  },
+        { "BUTTON", 86, MenuHighlight::Button },
+    };
+
+    const uint8_t Y = 28;
+
+    for (auto& item : items) {
+        if (item.val == highlight) {
+            uint8_t w = strlen(item.label) * 6;
+            display->fillRect(item.x - 1, Y - 1, w + 2, 10, SSD1306_WHITE);
+            display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+        } else {
+            display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+        }
+        display->setCursor(item.x, Y);
+        display->print(item.label);
+    }
+
+    display->display();
+}

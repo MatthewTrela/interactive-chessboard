@@ -22,6 +22,13 @@ struct PlayerUIState {
     bool needsRedraw = true;
 };
 
+enum class MenuHighlight {
+    None,
+    Left,
+    Right,
+    Button
+};
+
 class DisplayManager {
 public:
     DisplayManager();
@@ -31,6 +38,7 @@ public:
     void printMessage(int playerID, int line, const String& message, bool instantUpdate = false);
     void showPickedUpPiece(Chess::PieceType piece, Chess::ChessColor color);
     void drawGrid(int playerID, uint64_t boardState);
+    void drawMainMenu(int playerID, MenuHighlight highlight);
 
 
 private:

@@ -4,6 +4,7 @@
 #include "IO/io_expander.h"
 #include "global.h"
 #include "IO/display_manager.h"
+#include "IO/encoder.h"
 
 TaskHandle_t GameLoopTaskHandle = NULL;
 TaskHandle_t UITaskHandle = NULL;
@@ -18,8 +19,8 @@ void gameLoopTask(void* pvParameters) {
         ulTaskNotifyTake(pdTRUE, waitTime);
 
         uint64_t newOccupancy = readBoardBitmap();
-        uiManager->drawGrid(1, newOccupancy);
-        uiManager->drawGrid(2, newOccupancy);
+        // uiManager->drawGrid(1, newOccupancy);
+        // uiManager->drawGrid(2, newOccupancy);
 
         switch (game.getState()) {
             case SystemState::INIT:
@@ -44,10 +45,25 @@ void gameLoopTask(void* pvParameters) {
 }
 
 void UITask(void* pvParameters) {
+    // Draw initial state with nothing highlighted
+    uiManager->drawMainMenu(1, MenuHighlight::None);
+    uiManager->drawMainMenu(2, MenuHighlight::None);
+
     for (;;) {
-        // TODO
-        // Check current game state
-        // Update OLEDs based on user settings from both users
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        for (uint8_t p = 0; p < 2; p++) {
+            EncoderData d = encoder->getData(p);
+
+            MenuHighlight h = MenuHighlight::None;
+            if      (d.leftSpin)      h = MenuHighlight::Left;
+            else if (d.rightSpin)     h = MenuHighlight::Right;
+            else if (d.buttonPressed) h = MenuHighlight::Button;
+
+            if (h != MenuHighlight::None) {
+                uiManager->drawMainMenu(p + 1, h);
+            }
+        }
     }
 }
 
@@ -62,4 +78,5 @@ void initTasks() {
     // TODO: Create tasks and assign priorities
     // xTaskCreatePinnedToCore(EngineTask, "Engine", 8192, nullptr, 1, &EngineTaskHandle, 0);
     xTaskCreatePinnedToCore(gameLoopTask, "GameLoop", 4096, nullptr, 5, &GameLoopTaskHandle, 1);
+    xTaskCreatePinnedToCore(UITask, "UI", 4096, nullptr, 3, &UITaskHandle, 1);
 }

@@ -8,6 +8,7 @@
 #include <MCP23S17.h>
 
 class DisplayManager;
+class Encoder;
 
 // I2C Pins
 #define P1_SDA 4
@@ -68,11 +69,12 @@ class DisplayManager;
 #define LEGAL_CAPTURE_COLOR 0xFF6600  // orange
 #define LIFTED_PIECE_COLOR 0xFFFFFF   // white
 #define CASTLING_COLOR 0xBF00FF       // PURPLE
-#define WHITE 0xFFFFFF                // white
-#define RED 0xFF0000                  // red
+#define WHITE_PIECES 0xFFFFFF         // white
+#define BLACK_PIECES 0xFF0000         // red
 
 // ========== GLOBAL OBJECTS (Declared as extern) ==========
 extern DisplayManager* uiManager;
+extern Encoder* encoder;
 extern Adafruit_NeoPixel* strip;
 extern MCP23S17* expanders[4];
 

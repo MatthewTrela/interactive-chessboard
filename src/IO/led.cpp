@@ -219,7 +219,7 @@ void lightAllStartingSquares(uint64_t sensorOccupancy) {
 
             // Only light if it's a starting square AND piece is missing
             if (isStartingSquare && !hasPiece) {
-                setLED(row, col, (row <= 1) ? WHITE : RED);
+                setLED(row, col, (row <= 1) ? WHITE_PIECES : BLACK_PIECES);
             } else {
                 setLED(row, col, 0x000000);
             }

@@ -1,14 +1,11 @@
-#ifndef ENCODER_H
-#define ENCODER_H
+#pragma once
 
 #include <Arduino.h>
-#include <cstdint>
-#include <esp_attr.h>
 
 struct EncoderData {
-    bool buttonPressed;
-    bool rightSpin;
     bool leftSpin;
+    bool rightSpin;
+    bool buttonPressed;
 };
 
 class Encoder {
@@ -16,14 +13,22 @@ public:
     Encoder();
     EncoderData getData(uint8_t player);
 
-    void IRAM_ATTR p1AHandler();
-    void IRAM_ATTR p2AHandler();
-    void IRAM_ATTR p1ButtonHandler();
-    void IRAM_ATTR p2ButtonHandler();
-
 private:
-    volatile EncoderData data[2] = { {false, false, false}, {false, false, false} };
-    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
-};
+    struct EncoderState {
+        volatile int32_t delta = 0;
+        volatile bool buttonPressed = false;
+        volatile uint8_t prevState = 0;
+    };
 
-#endif
+    EncoderState data[2];
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
+    static void IRAM_ATTR handleP1();
+    static void IRAM_ATTR handleP2();
+    static void IRAM_ATTR handleP1Button();
+    static void IRAM_ATTR handleP2Button();
+
+    static Encoder* instance;
+
+    void IRAM_ATTR handle(uint8_t idx);
+};
