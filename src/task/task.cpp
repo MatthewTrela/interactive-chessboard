@@ -11,16 +11,15 @@ TaskHandle_t UITaskHandle = NULL;
 TaskHandle_t EngineTaskHandle = NULL;
 
 void gameLoopTask(void* pvParameters) {
+    uint64_t startOccupancy = readBoardBitmap();
+    game.updateInitialization(startOccupancy);
+
     for (;;) {
-        TickType_t waitTime = game.isDebouncing()
-            ? pdMS_TO_TICKS(DEBOUNCE_MS)
-            : portMAX_DELAY;
+        TickType_t waitTime = game.isDebouncing() ? pdMS_TO_TICKS(DEBOUNCE_MS): portMAX_DELAY;
 
         ulTaskNotifyTake(pdTRUE, waitTime);
 
         uint64_t newOccupancy = readBoardBitmap();
-        // uiManager->drawGrid(1, newOccupancy);
-        // uiManager->drawGrid(2, newOccupancy);
 
         switch (game.getState()) {
             case SystemState::INIT:
@@ -46,16 +45,24 @@ void gameLoopTask(void* pvParameters) {
 
 void UITask(void* pvParameters) {
     for (uint8_t p = 0; p < 2; p++) {
-        uiManager->drawMainMenu(p + 1, MenuHighlight::Arrow);
+        uiManager->drawMainMenu(p + 1, MenuHighlight::None);
     }
 
     for (;;) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        uint32_t notificationValue = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
 
-        for (uint8_t p = 0; p < 2; p++) {
-            EncoderData d = encoder->getData(p);
-            uiManager->handleInput(p + 1, d.leftSpin, d.rightSpin, d.buttonPressed);
+        if (notificationValue > 0) {
+            for (uint8_t p = 0; p < 2; p++) {
+                EncoderData d = encoder->getData(p);
+                uiManager->handleInput(p + 1, d.leftSpin, d.rightSpin, d.buttonPressed);
+            }
+        } 
+        else {     
+            if (game.getState() == SystemState::PLAYING) {
+                // Update timer
+            }
         }
+        uiManager->updateDisplays();
     }
 }
 

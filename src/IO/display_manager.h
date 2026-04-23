@@ -6,16 +6,16 @@
 #include "Chess/chess.hpp"
 #include "global.h"
 
-enum class Screen { MainMenu, OptionsMenu };
-enum class MenuHighlight { None, Arrow, Left, Right, Button };
-enum class OptionsHighlight{ None, LegalMoves, BestMoves };
+enum class Screen {MainMenu, OptionsMenu};
+enum class MenuHighlight { None, Settings, Undo, Square};
+enum class OptionsHighlight{ None, LegalMoves, BestMoves, Reset};
 
 struct PlayerUIState {
     Screen  screen       = Screen::MainMenu;
     uint8_t menuIndex    = 0;
     uint8_t optionsIndex = 0;
-    bool    legalMoves   = false;
-    bool    bestMoves    = false;
+    bool    legalMoves   = true;
+    bool    bestMoves    = true;
     bool    needsRedraw  = false;
 };
 
@@ -41,7 +41,10 @@ private:
 
     PlayerUIState uiState[2];
 
-    static MenuHighlight    menuHL(uint8_t index);
+    static void drawGear (Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color);
+    static void drawSquareIcon(Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color);
+    static void drawToggle(Adafruit_SSD1306* d, uint8_t x, uint8_t y, bool on);
+    static MenuHighlight menuHL(uint8_t index);
     static OptionsHighlight optHL (uint8_t index);
     Adafruit_SSD1306* getDisplay(int playerID);
 };
