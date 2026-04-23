@@ -45,24 +45,16 @@ void gameLoopTask(void* pvParameters) {
 }
 
 void UITask(void* pvParameters) {
-    // Draw initial state with nothing highlighted
-    uiManager->drawMainMenu(1, MenuHighlight::None);
-    uiManager->drawMainMenu(2, MenuHighlight::None);
+    for (uint8_t p = 0; p < 2; p++) {
+        uiManager->drawMainMenu(p + 1, MenuHighlight::Arrow);
+    }
 
     for (;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
         for (uint8_t p = 0; p < 2; p++) {
             EncoderData d = encoder->getData(p);
-
-            MenuHighlight h = MenuHighlight::None;
-            if      (d.leftSpin)      h = MenuHighlight::Left;
-            else if (d.rightSpin)     h = MenuHighlight::Right;
-            else if (d.buttonPressed) h = MenuHighlight::Button;
-
-            if (h != MenuHighlight::None) {
-                uiManager->drawMainMenu(p + 1, h);
-            }
+            uiManager->handleInput(p + 1, d.leftSpin, d.rightSpin, d.buttonPressed);
         }
     }
 }

@@ -51,19 +51,70 @@ bool DisplayManager::begin() {
     return success;
 }
 
+void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bool buttonPressed) {
+    if (playerID < 1 || playerID > 2) return;
+    if (!leftSpin && !rightSpin && !buttonPressed) return;
+
+    PlayerUIState& s = uiState[playerID - 1];
+
+    if (s.screen == Screen::MainMenu) {
+        constexpr uint8_t ITEMS = 4;
+
+        if (leftSpin) {
+            s.menuIndex = (s.menuIndex + ITEMS - 1) % ITEMS;
+            drawMainMenu(playerID, menuHL(s.menuIndex));
+
+        } else if (rightSpin) {
+            s.menuIndex = (s.menuIndex + 1) % ITEMS;
+            drawMainMenu(playerID, menuHL(s.menuIndex));
+
+        } else if (buttonPressed) {
+            if (s.menuIndex == 0) {                 // Arrow → enter Options
+                s.screen       = Screen::OptionsMenu;
+                s.optionsIndex = 0;
+                drawOptionsMenu(playerID, optHL(0));
+            }
+            // TODO: handle Left / Right / Button actions (indices 1-3)
+        }
+
+    } else if (s.screen == Screen::OptionsMenu) {
+        constexpr uint8_t ITEMS = 2;
+
+        if (leftSpin) {
+            if (s.optionsIndex == 0) {
+                s.screen = Screen::MainMenu;
+                drawMainMenu(playerID, menuHL(s.menuIndex));
+            } else {
+                s.optionsIndex--;
+                drawOptionsMenu(playerID, optHL(s.optionsIndex));
+            }
+
+        } else if (rightSpin) {
+            if (s.optionsIndex < ITEMS - 1) {
+                s.optionsIndex++;
+                drawOptionsMenu(playerID, optHL(s.optionsIndex));
+            }
+
+        } else if (buttonPressed) {
+            s.legalMoves = (s.optionsIndex == 0);
+            s.bestMoves  = (s.optionsIndex == 1);
+            s.screen     = Screen::MainMenu;
+            drawMainMenu(playerID, menuHL(s.menuIndex));
+        }
+    }
+}
+
 void DisplayManager::updateDisplays() {
-    if (stateP1.needsRedraw) {
+    if (uiState[0].needsRedraw) {
         displayP1.clearDisplay();
-        // Switch statement based on stateP1.currentState goes here
         displayP1.display();
-        stateP1.needsRedraw = false;
+        uiState[0].needsRedraw = false;
     }
 
-    if (stateP2.needsRedraw) {
+    if (uiState[1].needsRedraw) {
         displayP2.clearDisplay();
-        // Switch statement based on stateP2.currentState goes here
         displayP2.display();
-        stateP2.needsRedraw = false;
+        uiState[1].needsRedraw = false;
     }
 }
 
@@ -88,14 +139,6 @@ void DisplayManager::printMessage(int playerID, int line, const String& message,
     if (instantUpdate) {
         targetDisplay->display();
     }
-}
-
-void DisplayManager::showPickedUpPiece(Chess::PieceType piece, Chess::ChessColor color) {
-    int playerID = (color == Chess::ChessColor::White) ? 1 : 2;
-    String colorStr = (color == Chess::ChessColor::White) ? "White" : "Black";
-
-    printMessage(playerID, 0, "Picked up:      ", false);
-    printMessage(playerID, 1, colorStr + " " + pieceTypeName(piece), true);
 }
 
 void DisplayManager::drawGrid(int playerID, uint64_t boardState) {
@@ -148,13 +191,40 @@ void DisplayManager::drawMainMenu(int playerID, MenuHighlight highlight) {
     display->clearDisplay();
     display->setTextSize(1);
 
+    // Clock for Moves
+    display->setTextSize(2);
+    display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+    display->setCursor(38, 2);
+    display->print("10:00");
+    display->setTextSize(1);
+
+    display->drawLine(0, 20, 127, 20, SSD1306_WHITE);
+
+    const uint8_t A_TIP_X  = 3;
+    const uint8_t A_TIP_Y  = 41;
+    const uint8_t A_TAIL_X = 12;
+    const uint8_t A_TAIL_T = 25;
+    const uint8_t A_TAIL_B = 57;
+
+    const bool arrowSelected = (highlight == MenuHighlight::Arrow);
+    const uint16_t arrowFg   = arrowSelected ? SSD1306_BLACK : SSD1306_WHITE;
+
+    if (arrowSelected) {
+        display->fillRect(0, A_TAIL_T - 1, A_TAIL_X + 3,(A_TAIL_B - A_TAIL_T) + 3, SSD1306_WHITE);
+    }
+
+    display->drawLine(A_TAIL_X,     A_TAIL_T, A_TIP_X,     A_TIP_Y,  arrowFg); // top leg
+    display->drawLine(A_TIP_X,      A_TIP_Y,  A_TAIL_X,     A_TAIL_B, arrowFg); // bottom leg
+    display->drawLine(A_TAIL_X + 1, A_TAIL_T, A_TIP_X + 1, A_TIP_Y,  arrowFg);
+    display->drawLine(A_TIP_X + 1,  A_TIP_Y,  A_TAIL_X + 1, A_TAIL_B, arrowFg);
+
     struct { const char* label; uint8_t x; MenuHighlight val; } items[] = {
-        { "LEFT",   4,  MenuHighlight::Left   },
-        { "RIGHT",  46, MenuHighlight::Right  },
-        { "BUTTON", 86, MenuHighlight::Button },
+        { "LEFT",  18, MenuHighlight::Left   },
+        { "RIGHT", 55, MenuHighlight::Right  },
+        { "BTN",   96, MenuHighlight::Button },
     };
 
-    const uint8_t Y = 28;
+    const uint8_t Y = 37;
 
     for (auto& item : items) {
         if (item.val == highlight) {
@@ -169,4 +239,65 @@ void DisplayManager::drawMainMenu(int playerID, MenuHighlight highlight) {
     }
 
     display->display();
+}
+
+void DisplayManager::drawOptionsMenu(int playerID, OptionsHighlight highlight) {
+    Adafruit_SSD1306* display = nullptr;
+    if      (playerID == 1) display = &displayP1;
+    else if (playerID == 2) display = &displayP2;
+    else return;
+
+    display->clearDisplay();
+    display->setTextSize(1);
+
+    display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+    display->setCursor(34, 2);
+    display->print("OPTIONS");
+    display->drawLine(0, 12, 127, 12, SSD1306_WHITE);
+
+    struct {
+        const char*      label;
+        uint8_t          y;
+        OptionsHighlight val;
+    } items[] = {
+        { "Legal Moves", 22, OptionsHighlight::LegalMoves },
+        { "Best Moves",  40, OptionsHighlight::BestMoves  },
+    };
+
+    for (auto& item : items) {
+        if (item.val == highlight) {
+            display->fillRect(0, item.y - 1, 128, 10, SSD1306_WHITE);
+            display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+            display->setCursor(4, item.y);
+            display->print("> ");
+        } else {
+            display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+            display->setCursor(4, item.y);
+            display->print("  ");
+        }
+        display->print(item.label);
+    }
+
+    display->display();
+}
+
+MenuHighlight DisplayManager::menuHL(uint8_t i) {
+    switch (i) {
+        case 0:  return MenuHighlight::Arrow;
+        case 1:  return MenuHighlight::Left;
+        case 2:  return MenuHighlight::Right;
+        case 3:  return MenuHighlight::Button;
+        default: return MenuHighlight::None;
+    }
+}
+
+OptionsHighlight DisplayManager::optHL(uint8_t i) {
+    return (i == 0) ? OptionsHighlight::LegalMoves
+                    : OptionsHighlight::BestMoves;
+}
+
+Adafruit_SSD1306* DisplayManager::getDisplay(int playerID) {
+    if      (playerID == 1) return &displayP1;
+    else if (playerID == 2) return &displayP2;
+    return nullptr;
 }

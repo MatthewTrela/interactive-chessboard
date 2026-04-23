@@ -13,7 +13,6 @@ static inline void notifyUITask() {
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-// Transition table (Gray code)
 static const int8_t transitionTable[16] = {
      0, -1,  1,  0,
      1,  0,  0, -1,
@@ -32,16 +31,10 @@ Encoder::Encoder() {
     pinMode(ENCODER_P2_B, INPUT_PULLUP);
     pinMode(ENCODER_P2_BUTTON, INPUT_PULLUP);
 
-    // Initialize states
-    data[0].prevState =
-        (digitalRead(ENCODER_P1_A) << 1) |
-         digitalRead(ENCODER_P1_B);
+    data[0].prevState = (digitalRead(ENCODER_P1_A) << 1) | digitalRead(ENCODER_P1_B);
 
-    data[1].prevState =
-        (digitalRead(ENCODER_P2_A) << 1) |
-         digitalRead(ENCODER_P2_B);
+    data[1].prevState = (digitalRead(ENCODER_P2_A) << 1) |digitalRead(ENCODER_P2_B);
 
-    // Attach interrupts on BOTH A and B
     attachInterrupt(digitalPinToInterrupt(ENCODER_P1_A), handleP1, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENCODER_P1_B), handleP1, CHANGE);
 
@@ -104,18 +97,32 @@ EncoderData Encoder::getData(uint8_t player) {
     EncoderData result = {false, false, false};
     if (player > 1) return result;
 
+    int64_t now = esp_timer_get_time();
+
     portENTER_CRITICAL(&mux);
 
     int32_t d = data[player].delta;
-    data[player].delta = 0;
+    bool btn = data[player].buttonPressed;
+    int64_t lastConsumed = data[player].lastConsumedUs;
 
-    result.buttonPressed = data[player].buttonPressed;
-    data[player].buttonPressed = false;
+    bool spinReady = (d != 0) && ((now - lastConsumed) >= ENCODER_DEBOUNCE_US);
+
+    if (spinReady) {
+        data[player].delta = 0;
+        data[player].lastConsumedUs = now;
+    } else if (!spinReady && d != 0) {
+        d = 0;
+    }
+
+    if (btn) {
+        data[player].buttonPressed = false;
+    }
 
     portEXIT_CRITICAL(&mux);
 
     if (d > 0) result.rightSpin = true;
     if (d < 0) result.leftSpin  = true;
+    result.buttonPressed = btn;
 
     return result;
 }

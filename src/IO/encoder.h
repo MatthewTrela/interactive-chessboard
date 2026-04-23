@@ -16,8 +16,9 @@ public:
 private:
     struct EncoderState {
         volatile int32_t delta = 0;
-        volatile bool buttonPressed = false;
         volatile uint8_t prevState = 0;
+        volatile bool buttonPressed = false;
+        int64_t lastConsumedUs = 0;
     };
 
     EncoderState data[2];

@@ -44,8 +44,10 @@ class Encoder;
 #define MCP_ADDR_3 2  // 010
 #define MCP_ADDR_4 3  // 011
 
+// Debounce delays
 #define MCP_DEBOUNCE_DELAY_MS 15
 #define DEBOUNCE_MS 50
+#define ENCODER_DEBOUNCE_US 200000
 
 // OLED
 #define OLED_ADDRESS 0x3C
