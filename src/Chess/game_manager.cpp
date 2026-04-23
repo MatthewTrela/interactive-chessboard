@@ -455,9 +455,15 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         return;
     }
 
-    // CASTLING_ROOK_PLACED: rook on dest square, king on board
+    // CASTLING_ROOK_PLACED: rook on dest square
     if (movePhase == MovePhase::CASTLING_ROOK_PLACED) {
-        Serial.printf("[CASTLING_ROOK_PLACED] ERROR: unexpected placement on sq=%d\n", sq);
+        if (sq == kingToSquare) {
+            Serial.printf("[CASTLING_ROOK_PLACED] King placed on sq=%d, castle complete\n", sq);
+            executeMove(pendingMove);
+            return;
+        }
+        Serial.printf("[CASTLING_ROOK_PLACED] ERROR: unexpected placement on sq=%d (expected kingTo=%d)\n", sq,
+                      kingToSquare);
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
@@ -514,7 +520,13 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
     // CASTLING_KING_PLACED: king is on its destination, waiting for rook to be
     // picked up (handled in handlePiecePickup). No placement is valid here.
     if (movePhase == MovePhase::CASTLING_KING_PLACED) {
-        Serial.printf("[CASTLING_KING_PLACED] ERROR: unexpected placement on sq=%d — pick up the rook first\n", sq);
+        if (sq == rookToSquare) {
+            Serial.printf("[CASTLING_KING_PLACED] Rook placed on sq=%d, castle complete\n", sq);
+            executeMove(pendingMove);
+            return;
+        }
+        Serial.printf("[CASTLING_KING_PLACED] ERROR: unexpected placement on sq=%d (expected rookTo=%d)\n", sq,
+                      rookToSquare);
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
