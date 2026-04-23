@@ -171,9 +171,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
         if (sq == attackingSquare) {
             // King lifted — rook is already on its destination, king now in hand.
             Serial.printf("[CASTLING_ROOK_PLACED] King lifted at sq=%d\n", sq);
-
             movePhase = MovePhase::CASTLING_KING_LIFTED;
-            rookPlaced = true;  // rook is already on rookToSquare
             kingPlaced = false;
 
             // Highlight only king destination (rook is already placed)
@@ -188,6 +186,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             // Player picked the rook back up from its destination — cancel back to rook lifted.
             Serial.printf("[CASTLING_ROOK_PLACED] Rook picked back up, reverting to CASTLING_ROOK_LIFTED\n");
             movePhase = MovePhase::CASTLING_ROOK_LIFTED;
+            rookPlaced = false;
 
             int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
             if (players[playerIndex].showLegalMoves) {
@@ -449,6 +448,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         if (sq == rookToSquare) {
             Serial.printf("[CASTLING_ROOK_LIFTED] Rook placed on sq=%d (method 2: rook first), waiting for king\n", sq);
             movePhase = MovePhase::CASTLING_ROOK_PLACED;
+            rookPlaced = true;
             // Clear rook destination highlight; king destination remains to guide player
             int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
             if (players[playerIndex].showLegalMoves) {
@@ -486,10 +486,11 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
             if (rookPlaced) {
                 // Rook is already on its destination; king returned to origin.
                 // Revert to CASTLING_ROOK_PLACED so the player can pick the rook back up to fully cancel.
-                Serial.printf(
-                    "[CASTLING_KING_LIFTED] King returned to origin; rook on dest, reverting to "
-                    "CASTLING_ROOK_PLACED\n");
-                movePhase = MovePhase::CASTLING_ROOK_PLACED;
+                Serial.printf("[CASTLING_KING_PLACED] Rook lifted at sq=%d, both in hand\n", sq);
+                movePhase = MovePhase::CASTLING_BOTH_LIFTED;
+
+                kingPlaced = false;
+                rookPlaced = false;
 
                 int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
                 if (players[playerIndex].showLegalMoves) {
@@ -498,9 +499,20 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
                     flushLEDBuffer();
                 }
             } else {
-                // Rook hasn't moved — full cancel.
-                Serial.printf("[CASTLING_KING_LIFTED] King returned to origin, cancelling\n");
-                resetMovePhase();
+                Serial.printf("[CASTLING_KING_PLACED] King picked back up, reverting to CASTLING_KING_LIFTED\n");
+                movePhase = MovePhase::CASTLING_KING_LIFTED;
+
+                kingPlaced = false;
+                rookPlaced = false;
+
+                int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
+                if (players[playerIndex].showLegalMoves) {
+                    clearAllLEDs();
+                    highlightSquare(rookFromSquare / 8, rookFromSquare % 8, LIFTED_PIECE_COLOR);
+                    highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+                    highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+                    flushLEDBuffer();
+                }
             }
             return;
         }
