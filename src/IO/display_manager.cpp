@@ -147,6 +147,37 @@ void DisplayManager::printMessage(int playerID, int line, const String& message,
     }
 }
 
+void DisplayManager::updateTime(int playerID) {
+    PlayerUIState& s = uiState[playerID - 1];
+
+    if (s.startTime == 0) {
+        s.startTime = millis();
+    }
+
+    if (s.startTime == 0) {
+        return;
+    }
+
+    unsigned long timeChange = millis() - s.startTime;
+    int timeLeftSecs = 600 - (timeChange/1000); 
+    
+    if (timeLeftSecs < 0) timeLeftSecs = 0;
+
+    // Generate time string in second intervals
+    if (timeLeftSecs != s.lastSeconds) {
+        s.lastSeconds = timeLeftSecs;
+        int minutes = timeLeftSecs / 60;
+        int seconds = timeLeftSecs % 60;
+        snprintf(s.timeStr, sizeof(s.timeStr), "%02d:%02d", minutes, seconds);
+        s.needsRedraw = true; 
+    }
+}
+
+void DisplayManager::startClock(int playerID) {
+    PlayerUIState& s = uiState[playerID - 1];
+    s.startTime = millis();
+}
+
 void DisplayManager::drawGrid(int playerID, uint64_t boardState) {
     Adafruit_SSD1306 *display;
     if (playerID == 1) {
@@ -192,12 +223,14 @@ void DisplayManager::drawMainMenu(int playerID, MenuHighlight highlight) {
     Adafruit_SSD1306* display = getDisplay(playerID);
     if (!display) return;
 
+    PlayerUIState& s = uiState[playerID - 1];
+
     display->clearDisplay();
 
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
     display->setCursor(38, 2);
-    display->print("10:00");
+    display->print(s.timeStr);
     display->setTextSize(1);
     display->drawLine(0, 20, 127, 20, SSD1306_WHITE);
 

@@ -59,7 +59,11 @@ void UITask(void* pvParameters) {
         } 
         else {     
             if (game.getState() == SystemState::PLAYING) {
-                // Update timer
+                if (game.getBoard().getSideToMove() == Chess::ChessColor::White) {
+                    uiManager->updateTime(1);
+                } else {
+                    uiManager->updateTime(2);
+                }
             }
         }
         uiManager->updateDisplays();

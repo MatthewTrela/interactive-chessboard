@@ -11,12 +11,15 @@ enum class MenuHighlight { None, Settings, Undo, Square};
 enum class OptionsHighlight{ None, LegalMoves, BestMoves, Reset};
 
 struct PlayerUIState {
-    Screen  screen       = Screen::MainMenu;
-    uint8_t menuIndex    = 0;
+    Screen  screen = Screen::MainMenu;
+    uint8_t menuIndex = 0;
     uint8_t optionsIndex = 0;
-    bool    legalMoves   = true;
-    bool    bestMoves    = true;
-    bool    needsRedraw  = false;
+    unsigned long startTime = 0;
+    bool legalMoves = true;
+    bool bestMoves = true;
+    bool needsRedraw = false;
+    char timeStr[6] = "10:00"; 
+    int lastSeconds = -1;
 };
 
 class DisplayManager {
@@ -30,6 +33,8 @@ public:
     void drawGrid(int playerID, uint64_t boardState);
     void drawMainMenu(int playerID, MenuHighlight highlight);
     void drawOptionsMenu(int playerID, OptionsHighlight highlight);
+    void updateTime(int playerID);
+    void startClock(int playerID);
 
     const PlayerUIState& getState(int playerID) const {
         return uiState[playerID - 1];
