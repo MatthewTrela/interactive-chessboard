@@ -27,6 +27,8 @@ enum class MovePhase {
     IDLE,                  // No piece in hand; waiting for the moving side to act.
     ATTACKER_LIFTED,       // own piece lifted
     CAPTURED_REMOVED,      // opponent piece lifted, attacker in hand: normal captures and en passant
+    EP_ATTACKER_PLACED,    // en passant: attacker already placed on destination, waiting for captured pawn removal
+    CASTLING_ROOK_LIFTED,  // castling initiated by lifting the rook first (king still on board)
     CASTLING_BOTH_LIFTED,  // King and correct rook both in hand
     CASTLING_ONE_PLACED,   // one castling piece placed
 };
@@ -98,6 +100,7 @@ class GameManager {
     // populate rookFromSquare, rookToSquare, kingToSquare, pendingMove
     // Return true if castle is legal
     bool resolveCastle(Chess::Square rookSq);
+    bool resolveCastleFromRook(Chess::Square rookSq);
     /// Returns true if any legal move captures a piece on `targetSq`.
     // bool squareIsCaptureTarget(Chess::Square targetSq) const;
     void checkGameEndConditions();

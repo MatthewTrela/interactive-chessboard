@@ -148,15 +148,21 @@ void GameManager::updateSensorOccupancy(Chess::Square sq, bool occupied) {
 void GameManager::handlePiecePickup(Chess::Square sq) {
     // CASTLING_BOTH_LIFTED: both pieces already in hand
     // No further pickups are valid; player should be placing pieces now.
-    if (movePhase == MovePhase::CASTLING_BOTH_LIFTED || movePhase == MovePhase::CASTLING_ONE_PLACED) {
+    if (movePhase == MovePhase::CASTLING_BOTH_LIFTED || movePhase == MovePhase::CASTLING_ONE_PLACED ||
+        movePhase == MovePhase::CAPTURED_REMOVED) {
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
 
-    // CAPTURED_REMOVED: attacker + captured piece both lifted
-    // Next event must be a placement, not another pickup
-    if (movePhase == MovePhase::CAPTURED_REMOVED) {
-        currentState = SystemState::ERROR_RECOVERY;
+    // EP_ATTACKER_PLACED: attacker is already on the destination; waiting for
+    // the physically-captured pawn to be removed from the board.
+    if (movePhase == MovePhase::EP_ATTACKER_PLACED) {
+        if (sq == capturedSquare) {
+            // Captured pawn removed — the move is now fully committed.
+            executeMove(pendingMove);
+        } else {
+            currentState = SystemState::ERROR_RECOVERY;
+        }
         return;
     }
 
@@ -170,12 +176,43 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
     bool isOwnPiece = (pieceColor == sideToMove);
     bool isOpponentPiece = (pieceType != Chess::PieceType::None) && !isOwnPiece;
 
+    // CASTLING_ROOK_LIFTED: rook is already in hand, now waiting for the king.
+    if (movePhase == MovePhase::CASTLING_ROOK_LIFTED) {
+        if (!isOwnPiece || pieceType != Chess::PieceType::King) {
+            currentState = SystemState::ERROR_RECOVERY;
+            return;
+        }
+        // King lifted — both pieces now in hand.
+        // attackingSquare (king origin) was stored by resolveCastleFromRook.
+        movePhase = MovePhase::CASTLING_BOTH_LIFTED;
+        return;
+    }
+
     // IDLE: only own piece may initiate a move
     if (movePhase == MovePhase::IDLE) {
         if (!isOwnPiece || pieceType == Chess::PieceType::None) {
             // Touching the opponent's piece before your own is illegal.
             currentState = SystemState::ERROR_RECOVERY;
             return;
+        }
+
+        // Try rook-first castling: own rook lifted from its starting square
+        // before the king — resolve the castle now if legal.
+        if (pieceType == Chess::PieceType::Rook) {
+            if (resolveCastleFromRook(sq)) {
+                movePhase = MovePhase::CASTLING_ROOK_LIFTED;
+                int playerIndex = (sideToMove == Chess::ChessColor::White) ? 0 : 1;
+                if (players[playerIndex].showLegalMoves) {
+                    // Highlight king origin and both destinations
+                    clearAllLEDs();
+                    highlightSquare(attackingSquare / 8, attackingSquare % 8, LIFTED_PIECE_COLOR);
+                    highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+                    highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+                    flushLEDBuffer();
+                }
+                return;
+            }
+            // Not a castling rook (or castle isn't legal)
         }
 
         // Record attacker and advance phase.
@@ -237,6 +274,15 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             }
 
             movePhase = MovePhase::CASTLING_BOTH_LIFTED;
+
+            int playerIndex = (sideToMove == Chess::ChessColor::White) ? 0 : 1;
+            if (players[playerIndex].showLegalMoves) {
+                clearAllLEDs();
+                highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
+                highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
+                flushLEDBuffer();
+            }
+
             return;
         }
 
@@ -273,17 +319,26 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
 void GameManager::handlePiecePlacement(Chess::Square sq) {
     // IDLE: nothing in hand
     if (movePhase == MovePhase::IDLE) {
-        Serial.println("[handlePiecePlacement] -> ERROR: IDLE");
+        currentState = SystemState::ERROR_RECOVERY;
+        return;
+    }
+
+    // CASTLING_ROOK_LIFTED: rook is in hand, king hasn't been lifted yet.
+    // Only the rook may be placed back on its origin (cancel), or it's an error.
+    if (movePhase == MovePhase::CASTLING_ROOK_LIFTED) {
+        if (sq == rookFromSquare) {
+            // Player changed their mind; cancel the castling initiation.
+            resetMovePhase();
+            return;
+        }
         currentState = SystemState::ERROR_RECOVERY;
         return;
     }
 
     // ATTACKER_LIFTED
     if (movePhase == MovePhase::ATTACKER_LIFTED) {
-        Serial.printf("[handlePiecePlacement] ATTACKER_LIFTED, sq==attackingSquare? %d\n", sq == attackingSquare);
         // cancel move
         if (sq == attackingSquare) {
-            Serial.println("[handlePiecePlacement] -> CANCEL branch");
             resetMovePhase();
             return;
         }
@@ -291,6 +346,21 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         // skipped lifting opponent piece (shouldn't be physically possible)
         if (currentBoard.pieceAt(sq) != Chess::PieceType::None) {
             currentState = SystemState::ERROR_RECOVERY;
+            return;
+        }
+
+        // Check if this is an en passant destination placed before the captured
+        // pawn is removed (attacker-first en passant sequence).
+        Chess::Move epMove;
+        if (findLegalMove(attackingSquare, sq, epMove) && epMove.getFlags() == 5) {
+            // Attacker placed on EP destination; now wait for captured pawn removal.
+            pendingMove = epMove;
+            // Compute the captured pawn's square: same rank as attacker origin,
+            // same file as destination.
+            int epRank = static_cast<int>(attackingSquare) / 8;
+            int epFile = static_cast<int>(sq) % 8;
+            capturedSquare = static_cast<Chess::Square>(epRank * 8 + epFile);
+            movePhase = MovePhase::EP_ATTACKER_PLACED;
             return;
         }
 
@@ -302,6 +372,14 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         }
 
         executeMove(move);
+        return;
+    }
+
+    // EP_ATTACKER_PLACED: attacker is already on the destination square;
+    // wait for the captured pawn to be physically removed
+    if (movePhase == MovePhase::EP_ATTACKER_PLACED) {
+        // No placement is valid while waiting for the captured pawn removal
+        currentState = SystemState::ERROR_RECOVERY;
         return;
     }
 
@@ -461,6 +539,54 @@ bool GameManager::resolveCastle(Chess::Square rookSq) {
         if (!findLegalMove(attackingSquare, opt.kingTo, castleMove)) continue;
         if (castleMove.getFlags() != opt.moveFlag) continue;
 
+        rookFromSquare = opt.rookFrom;
+        rookToSquare = opt.rookTo;
+        kingToSquare = opt.kingTo;
+        pendingMove = castleMove;
+        kingPlaced = false;
+        rookPlaced = false;
+        return true;
+    }
+
+    return false;
+}
+
+bool GameManager::resolveCastleFromRook(Chess::Square rookSq) {
+    // Like resolveCastle, but the rook is lifted first.
+    Chess::ChessColor side = currentBoard.getSideToMove();
+    bool isWhite = (side == Chess::ChessColor::White);
+
+    struct CastleInfo {
+        Chess::Square kingFrom;
+        Chess::Square rookFrom;
+        Chess::Square rookTo;
+        Chess::Square kingTo;
+        uint16_t moveFlag;
+    };
+
+    CastleInfo options[2];
+    if (isWhite) {
+        options[0] = {Chess::SQ_E1, Chess::SQ_H1, Chess::SQ_F1, Chess::SQ_G1, 2};
+        options[1] = {Chess::SQ_E1, Chess::SQ_A1, Chess::SQ_D1, Chess::SQ_C1, 3};
+    } else {
+        options[0] = {Chess::SQ_E8, Chess::SQ_H8, Chess::SQ_F8, Chess::SQ_G8, 2};
+        options[1] = {Chess::SQ_E8, Chess::SQ_A8, Chess::SQ_D8, Chess::SQ_C8, 3};
+    }
+
+    for (const CastleInfo& opt : options) {
+        if (rookSq != opt.rookFrom) continue;
+
+        // Verify piece at king origin really is the king.
+        if (currentBoard.pieceAt(opt.kingFrom) != Chess::PieceType::King) continue;
+        if (currentBoard.colorAt(opt.kingFrom) != side) continue;
+
+        // Verify the castle move is legal (king travels two squares).
+        Chess::Move castleMove;
+        if (!findLegalMove(opt.kingFrom, opt.kingTo, castleMove)) continue;
+        if (castleMove.getFlags() != opt.moveFlag) continue;
+
+        // Store all the castling state; attackingSquare = king origin.
+        attackingSquare = opt.kingFrom;
         rookFromSquare = opt.rookFrom;
         rookToSquare = opt.rookTo;
         kingToSquare = opt.kingTo;
