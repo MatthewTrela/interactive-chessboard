@@ -70,9 +70,10 @@ class Encoder;
 #define LEGAL_MOVE_COLOR 0x0000FF     // blue
 #define LEGAL_CAPTURE_COLOR 0xFF6600  // orange
 #define LIFTED_PIECE_COLOR 0xFFFFFF   // white
-#define CASTLING_COLOR 0xBF00FF       // PURPLE
+#define CASTLING_COLOR 0xBF40FF       // PURPLE
 #define WHITE_PIECES 0xFFFFFF         // white
-#define BLACK_PIECES 0xFF0000         // red
+#define BLACK_PIECES 0x4d0099         // dark purple
+#define ILLEGAL_PIECE_COLOR 0xff0000  // red
 
 // ========== GLOBAL OBJECTS (Declared as extern) ==========
 extern DisplayManager* uiManager;
