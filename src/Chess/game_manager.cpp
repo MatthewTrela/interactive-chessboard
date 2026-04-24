@@ -875,6 +875,10 @@ void GameManager::checkGameEndConditions() {
         currentState = SystemState::GAME_OVER;
         return;
     }
+    if (currentBoard.isThreefoldRepetition()) {
+        currentState = SystemState::GAME_OVER;
+        return;
+    }
     if (currentBoard.isInsufficientMaterial()) {
         currentState = SystemState::GAME_OVER;
         return;

@@ -221,6 +221,10 @@ class Board {
     /// meaning timeout should be scored as draw.
     bool isTimeoutVsInsufficientMaterial(ChessColor timedOutSide) const;
 
+    /// @return True if the current position has appeared at least twice in the
+    ///         move history (threefold repetition).
+    bool isThreefoldRepetition() const;
+
     /// Returns the type of piece occupying a square, ignoring color.
     /// @param sq  The square to query.
     /// @return    The PieceType on that square, or PieceType::None if empty.
@@ -262,6 +266,8 @@ class Board {
     int fullMoveNumber;
 
     uint64_t zobristKey;
+    uint64_t zobristHistory[MAX_GAME_PLIES];
+    int zobristHistoryIndex = 0;
 
     struct StateInfo {
         Square epSquare;

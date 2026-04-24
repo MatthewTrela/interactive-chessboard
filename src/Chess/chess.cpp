@@ -592,13 +592,17 @@ IRAM_ATTR bool Board::makeMove(Move move) {
         }
     }
 
-    StateInfo state;
+    StateInfo& state = stateHistory[historyIndex];
     state.epSquare = enPassantSquare;
     state.castlingRights = castlingRights;
     state.halfMoveClock = halfMoveClock;
     state.capturedPiece = capturedPiece;
     state.zobristKey = zobristKey;
     stateHistory[historyIndex++] = state;
+    zobristHistory[zobristHistoryIndex++] = zobristKey;
+
+    // clamp to array bounds
+    if (zobristHistoryIndex >= MAX_GAME_PLIES) zobristHistoryIndex = MAX_GAME_PLIES - 1;
 
     BitUtils::clearBit(pieces[us][static_cast<int>(movedPiece)], from);
     BitUtils::setBit(pieces[us][static_cast<int>(movedPiece)], to);
@@ -669,6 +673,8 @@ IRAM_ATTR bool Board::makeMove(Move move) {
 }
 
 IRAM_ATTR void Board::unmakeMove(Move move) {
+    if (zobristHistoryIndex > 0) --zobristHistoryIndex;
+
     sideToMove = (sideToMove == ChessColor::White) ? ChessColor::Black : ChessColor::White;
     int us = static_cast<int>(sideToMove);
     int them = us ^ 1;
@@ -810,6 +816,17 @@ bool Board::isTimeoutVsInsufficientMaterial(ChessColor timedOutSide) const {
 
     ChessColor winner = (timedOutSide == ChessColor::White) ? ChessColor::Black : ChessColor::White;
     return !hasSufficientMaterialToCheckmate(winner);
+}
+
+bool Board::isThreefoldRepetition() const {
+    if (zobristHistoryIndex < 2) return false;
+    int count = 0;
+    for (int i = 0; i < zobristHistoryIndex; ++i) {
+        if (zobristHistory[i] == zobristKey) {
+            if (++count >= 2) return true;  // current + 2 prior = 3x total
+        }
+    }
+    return false;
 }
 
 uint64_t Board::perft(int depth) {
