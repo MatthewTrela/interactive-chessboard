@@ -741,6 +741,77 @@ bool Board::isStalemate() const {
     return moves.size() == 0 && !isCheck();
 }
 
+bool Board::hasSufficientMaterialToCheckmate(ChessColor color) const {
+    if (color == ChessColor::None) return false;
+
+    int c = static_cast<int>(color);
+
+    int pawns = BitUtils::countBits(pieces[c][static_cast<int>(PieceType::Pawn)]);
+    int rooks = BitUtils::countBits(pieces[c][static_cast<int>(PieceType::Rook)]);
+    int queens = BitUtils::countBits(pieces[c][static_cast<int>(PieceType::Queen)]);
+    int bishops = BitUtils::countBits(pieces[c][static_cast<int>(PieceType::Bishop)]);
+    int knights = BitUtils::countBits(pieces[c][static_cast<int>(PieceType::Knight)]);
+
+    // Any major material or pawn can potentially lead to mate positions.
+    if (pawns > 0 || rooks > 0 || queens > 0) return true;
+
+    // Two bishops can mate.
+    if (bishops >= 2) return true;
+
+    // Bishop + knight can mate.
+    if (bishops >= 1 && knights >= 1) return true;
+
+    // King only, king+single minor, or king+2 knights => insufficient for timeout win.
+    if (bishops == 0 && knights <= 2) return false;
+    if (bishops == 1 && knights == 0) return false;
+
+    // Remaining rare cases (e.g. many minors) are sufficient.
+    return true;
+}
+
+bool Board::isInsufficientMaterial() const {
+    constexpr int W = static_cast<int>(ChessColor::White);
+    constexpr int B = static_cast<int>(ChessColor::Black);
+
+    int wP = BitUtils::countBits(pieces[W][static_cast<int>(PieceType::Pawn)]);
+    int bP = BitUtils::countBits(pieces[B][static_cast<int>(PieceType::Pawn)]);
+    int wR = BitUtils::countBits(pieces[W][static_cast<int>(PieceType::Rook)]);
+    int bR = BitUtils::countBits(pieces[B][static_cast<int>(PieceType::Rook)]);
+    int wQ = BitUtils::countBits(pieces[W][static_cast<int>(PieceType::Queen)]);
+    int bQ = BitUtils::countBits(pieces[B][static_cast<int>(PieceType::Queen)]);
+
+    // If any pawns/rooks/queens exist, not insufficient under these rules.
+    if (wP || bP || wR || bR || wQ || bQ) return false;
+
+    int wB = BitUtils::countBits(pieces[W][static_cast<int>(PieceType::Bishop)]);
+    int bB = BitUtils::countBits(pieces[B][static_cast<int>(PieceType::Bishop)]);
+    int wN = BitUtils::countBits(pieces[W][static_cast<int>(PieceType::Knight)]);
+    int bN = BitUtils::countBits(pieces[B][static_cast<int>(PieceType::Knight)]);
+
+    int wMinor = wB + wN;
+    int bMinor = bB + bN;
+
+    // K vs K
+    if (wMinor == 0 && bMinor == 0) return true;
+
+    // K+minor vs K
+    if ((wMinor == 1 && bMinor == 0) || (bMinor == 1 && wMinor == 0)) return true;
+
+    // K+2N vs K (same side has both knights, no bishop)
+    bool whiteK2NvsK = (wN == 2 && wB == 0 && bMinor == 0);
+    bool blackK2NvsK = (bN == 2 && bB == 0 && wMinor == 0);
+    if (whiteK2NvsK || blackK2NvsK) return true;
+
+    return false;
+}
+
+bool Board::isTimeoutVsInsufficientMaterial(ChessColor timedOutSide) const {
+    if (timedOutSide == ChessColor::None) return false;
+
+    ChessColor winner = (timedOutSide == ChessColor::White) ? ChessColor::Black : ChessColor::White;
+    return !hasSufficientMaterialToCheckmate(winner);
+}
+
 uint64_t Board::perft(int depth) {
     if (depth == 0) return 1ULL;
 
