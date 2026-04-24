@@ -189,6 +189,7 @@ void DisplayManager::updateTime(int playerID) {
 
     if (timeLeftSecs <= 0) {
         clearAllLEDs();
+        flushLEDBuffer();
         game.setState(SystemState::GAME_OVER);
         const char* reason = (playerID == 1) ? "White timeout" : "Black timeout";
         notifyGameEnd(reason);
