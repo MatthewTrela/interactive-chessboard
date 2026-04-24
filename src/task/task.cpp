@@ -15,7 +15,16 @@ void gameLoopTask(void* pvParameters) {
     game.updateInitialization(startOccupancy);
 
     for (;;) {
-        TickType_t waitTime = game.isDebouncing() ? pdMS_TO_TICKS(DEBOUNCE_MS): portMAX_DELAY;
+        SystemState state = game.getState();
+        TickType_t waitTime;
+
+        if (state == SystemState::GAME_OVER) {
+            waitTime = pdMS_TO_TICKS(200);
+        } else if (game.isDebouncing()) {
+            waitTime = pdMS_TO_TICKS(DEBOUNCE_MS);
+        } else {
+            waitTime = portMAX_DELAY;
+        }
 
         ulTaskNotifyTake(pdTRUE, waitTime);
 
@@ -35,6 +44,7 @@ void gameLoopTask(void* pvParameters) {
                 break;
             case SystemState::GAME_OVER:
                 // TODO: show game over
+                uiManager->notifyGameEnd("reason");
                 Serial.println("We in game over");
                 break;
             default:

@@ -1,6 +1,7 @@
 #include "display_manager.h"
 #include "IO/io_expander.h"
 #include "Chess/game_manager.h"
+#include "IO/led.h"
 
 static const char* pieceTypeName(Chess::PieceType pt) {
     switch (pt) {
@@ -49,6 +50,8 @@ bool DisplayManager::begin() {
         displayP2.display();
     }
 
+    setTimeControl(30);
+    
     return success;
 }
 
@@ -104,6 +107,12 @@ void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bo
             }
             s.needsRedraw = true;
         }
+    } else if (s.screen == Screen::GameOver) {
+        if (buttonPressed) {
+            resetState(1);
+            resetState(2);
+            game.init();
+        }
     }
 }
 
@@ -117,11 +126,33 @@ void DisplayManager::updateDisplays() {
                 drawMainMenu(playerID, menuHL(s.menuIndex));
             } else if (s.screen == Screen::OptionsMenu) {
                 drawOptionsMenu(playerID, optHL(s.optionsIndex));
+            } else if (s.screen == Screen::GameOver) {
+                drawGameOver(playerID, lossReason);
             }
             
             s.needsRedraw = false;
         }
     }
+}
+
+void DisplayManager::resetState(int playerID) {
+    int savedTime = uiState[playerID - 1].totalSeconds;
+    uiState[playerID - 1] = PlayerUIState{};
+    uiState[playerID - 1].totalSeconds = savedTime;
+    int m = savedTime / 60;
+    int s = savedTime % 60;
+    snprintf(uiState[playerID - 1].timeStr, sizeof(uiState[playerID-1].timeStr), "%02d:%02d", m, s);
+    uiState[playerID - 1].needsRedraw = true;
+}
+
+void DisplayManager::notifyGameEnd(const char* reason) {
+    if (uiState[0].screen == Screen::GameOver) return;
+
+    strcpy(lossReason, reason);
+    uiState[0].screen = Screen::GameOver;
+    uiState[1].screen = Screen::GameOver;
+    uiState[0].needsRedraw = true;
+    uiState[1].needsRedraw = true;
 }
 
 void DisplayManager::printMessage(int playerID, int line, const String& message, bool instantUpdate) {
@@ -148,28 +179,39 @@ void DisplayManager::printMessage(int playerID, int line, const String& message,
 }
 
 void DisplayManager::updateTime(int playerID) {
+    if (uiState[0].screen == Screen::GameOver) return;
+
     PlayerUIState& s = uiState[playerID - 1];
+    if (s.startTime == 0) s.startTime = millis();
 
-    if (s.startTime == 0) {
-        s.startTime = millis();
-    }
+    unsigned long timeChange = millis() - s.startTime;
+    int timeLeftSecs = s.totalSeconds - (int)(timeChange / 1000);
 
-    if (s.startTime == 0) {
+    if (timeLeftSecs <= 0) {
+        clearAllLEDs();
+        game.setState(SystemState::GAME_OVER);
+        const char* reason = (playerID == 1) ? "White timeout" : "Black timeout";
+        notifyGameEnd(reason);
         return;
     }
 
-    unsigned long timeChange = millis() - s.startTime;
-    int timeLeftSecs = 600 - (timeChange/1000); 
-    
-    if (timeLeftSecs < 0) timeLeftSecs = 0;
-
-    // Generate time string in second intervals
+    // Generate time string for OLED
     if (timeLeftSecs != s.lastSeconds) {
         s.lastSeconds = timeLeftSecs;
         int minutes = timeLeftSecs / 60;
         int seconds = timeLeftSecs % 60;
         snprintf(s.timeStr, sizeof(s.timeStr), "%02d:%02d", minutes, seconds);
-        s.needsRedraw = true; 
+        s.needsRedraw = true;
+    }
+}
+
+void DisplayManager::setTimeControl(int seconds) {
+    for (int i = 0; i < 2; i++) {
+        uiState[i].totalSeconds = seconds;
+        int m = seconds / 60;
+        int s = seconds % 60;
+        snprintf(uiState[i].timeStr, sizeof(uiState[i].timeStr), "%02d:%02d", m, s);
+        uiState[i].needsRedraw = true;
     }
 }
 
@@ -313,6 +355,36 @@ void DisplayManager::drawOptionsMenu(int playerID, OptionsHighlight highlight) {
         }
     }
 
+    display->display();
+}
+
+void DisplayManager::drawGameOver(int playerID, const char* reason) {
+    Adafruit_SSD1306* display = getDisplay(playerID);
+    if (!display) return;
+
+    display->clearDisplay();
+
+    display->setTextSize(2); 
+    display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+    display->setCursor(10, 8);
+    display->print("Game Over");
+
+    display->setTextSize(1);
+    display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+    int reasonLen = strlen(reason);
+    int reasonWidth = reasonLen * 6;
+    int reasonX = (128 - reasonWidth) / 2;
+    
+    if (reasonX < 0) reasonX = 0; 
+    
+    display->setCursor(reasonX, 30);
+    display->print(reason);
+
+    display->setTextColor(SSD1306_BLACK, SSD1306_WHITE); 
+    display->setCursor(31, 48); // Moved down to Y=48
+    display->print("Play again?");
+    
     display->display();
 }
 

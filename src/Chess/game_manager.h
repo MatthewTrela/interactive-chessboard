@@ -55,6 +55,7 @@ class GameManager {
 
     Chess::Board& getBoard();
     SystemState getState();
+    void setState(SystemState state) { currentState = state; }
     bool isDebouncing() const { return debounceStartTime != 0; }
 
    private:
