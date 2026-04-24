@@ -221,6 +221,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
             if (players[playerIndex].showLegalMoves) {
                 clearAllLEDs();
+                highlightSquare(rookFromSquare / 8, rookFromSquare % 8, CASTLING_COLOR);
                 highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
                 flushLEDBuffer();
             }
@@ -533,6 +534,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
                 int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
                 if (players[playerIndex].showLegalMoves) {
                     clearAllLEDs();
+                    highlightSquare(rookFromSquare / 8, rookFromSquare % 8, CASTLING_COLOR);
                     highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
                     flushLEDBuffer();
                 }
