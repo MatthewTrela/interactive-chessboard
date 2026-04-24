@@ -110,6 +110,8 @@ void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bo
                 s.bestMoves = !s.bestMoves;
                 game.setSettings(playerID - 1, s.bestMoves, s.legalMoves);
             } else if (s.optionsIndex == 2) {  // reset button
+                resetState(1);
+                resetState(2);
                 game.init();
             }
             s.needsRedraw = true;
@@ -143,12 +145,19 @@ void DisplayManager::updateDisplays() {
 }
 
 void DisplayManager::resetState(int playerID) {
+    // 1. Save the persistent variables
     int savedTime = uiState[playerID - 1].totalSeconds;
+    bool savedLegal = uiState[playerID - 1].legalMoves;
+    bool savedBest = uiState[playerID - 1].bestMoves;
+
     uiState[playerID - 1] = PlayerUIState{};
     uiState[playerID - 1].totalSeconds = savedTime;
+    uiState[playerID - 1].legalMoves = savedLegal;
+    uiState[playerID - 1].bestMoves = savedBest;
     int m = savedTime / 60;
     int s = savedTime % 60;
     snprintf(uiState[playerID - 1].timeStr, sizeof(uiState[playerID - 1].timeStr), "%02d:%02d", m, s);
+
     uiState[playerID - 1].needsRedraw = true;
 }
 
