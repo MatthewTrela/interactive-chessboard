@@ -95,7 +95,8 @@ void GameManager::updateBoard(uint64_t newBoard) {
         return;
     }
 
-    if (Chess::BitUtils::countBits(diffBoard) != 1) {
+    int bitsDiff = Chess::BitUtils::countBits(diffBoard);
+    if (bitsDiff != 1) {
         Serial.printf("[updateBoard] -> ERROR: diffBoard has %d bits\n", Chess::BitUtils::countBits(diffBoard));
         // Accept the new sensor reading so subsequent single-square changes are
         // diffed against the correct baseline, then refresh error highlights.
@@ -359,29 +360,6 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             // Touching the opponent's piece before your own is illegal.
             enterErrorRecovery();
             return;
-        }
-
-        // Try rook-first castling: own rook lifted from its starting square
-        // before the king — resolve the castle now if legal.
-        if (pieceType == Chess::PieceType::Rook) {
-            if (resolveCastleFromRook(sq)) {
-                Serial.printf("[IDLE] Rook-first castle: rookFrom=%d kingFrom=%d kingTo=%d rookTo=%d\n", rookFromSquare,
-                              attackingSquare, kingToSquare, rookToSquare);
-                movePhase = MovePhase::CASTLING_ROOK_LIFTED;
-                int playerIndex = (sideToMove == Chess::ChessColor::White) ? 0 : 1;
-                if (players[playerIndex].showLegalMoves) {
-                    // Highlight king origin and both destinations
-                    // clearAllLEDs();
-                    highlightLegalMoves(sq, currentBoard);
-                    highlightSquare(attackingSquare / 8, attackingSquare % 8, LIFTED_PIECE_COLOR);
-                    highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
-                    highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
-                    flushLEDBuffer();
-                }
-                return;
-            } else
-                Serial.printf("[IDLE] Rook lifted at sq=%d but no legal castle found, treating as normal piece\n", sq);
-            // Not a castling rook (or castle isn't legal)
         }
 
         // Record attacker and advance phase.
