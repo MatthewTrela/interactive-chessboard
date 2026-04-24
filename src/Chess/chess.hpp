@@ -208,6 +208,19 @@ class Board {
     /// @return True if the side to move has no legal moves but is not in check.
     bool isStalemate() const;
 
+    /// @return True if the current position is a draw by insufficient material
+    /// under the implemented rule set:
+    /// K vs K, K+minor vs K, K+2N vs K.
+    bool isInsufficientMaterial() const;
+
+    /// @return True if `color` has enough material to theoretically deliver mate.
+    /// (Used for timeout adjudication)
+    bool hasSufficientMaterialToCheckmate(ChessColor color) const;
+
+    /// @return True if the side that did NOT flag has insufficient mating material,
+    /// meaning timeout should be scored as draw.
+    bool isTimeoutVsInsufficientMaterial(ChessColor timedOutSide) const;
+
     /// Returns the type of piece occupying a square, ignoring color.
     /// @param sq  The square to query.
     /// @return    The PieceType on that square, or PieceType::None if empty.

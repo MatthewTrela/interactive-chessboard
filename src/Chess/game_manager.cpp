@@ -875,6 +875,10 @@ void GameManager::checkGameEndConditions() {
         currentState = SystemState::GAME_OVER;
         return;
     }
+    if (currentBoard.isInsufficientMaterial()) {
+        currentState = SystemState::GAME_OVER;
+        return;
+    }
 
     // Show best move hint for the side now to move, if enabled.
     int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
