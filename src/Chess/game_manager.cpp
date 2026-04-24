@@ -313,7 +313,8 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
                 int playerIndex = (sideToMove == Chess::ChessColor::White) ? 0 : 1;
                 if (players[playerIndex].showLegalMoves) {
                     // Highlight king origin and both destinations
-                    clearAllLEDs();
+                    // clearAllLEDs();
+                    highlightLegalMoves(sq, currentBoard);
                     highlightSquare(attackingSquare / 8, attackingSquare % 8, LIFTED_PIECE_COLOR);
                     highlightSquare(kingToSquare / 8, kingToSquare % 8, CASTLING_COLOR);
                     highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
@@ -604,6 +605,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
                 int playerIndex = (currentBoard.getSideToMove() == Chess::ChessColor::White) ? 0 : 1;
                 if (players[playerIndex].showLegalMoves) {
                     clearAllLEDs();
+                    highlightSquare(rookFromSquare / 8, rookFromSquare % 8, CASTLING_COLOR);
                     highlightSquare(rookToSquare / 8, rookToSquare % 8, CASTLING_COLOR);
                     flushLEDBuffer();
                 }
