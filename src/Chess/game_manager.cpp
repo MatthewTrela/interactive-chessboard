@@ -74,14 +74,12 @@ void GameManager::updateBoard(uint64_t newBoard) {
 
     // change detected, start timer
     if (debounceStartTime == 0) {
-        Serial.println("Debounce exit");
         debounceStartTime = millis();
         return;
     }
 
     // needs to be in different state for long enough
     if (millis() - debounceStartTime < DEBOUNCE_MS) {
-        Serial.println("Not in different state long enough");
         return;
     }
 
@@ -99,7 +97,10 @@ void GameManager::updateBoard(uint64_t newBoard) {
 
     if (Chess::BitUtils::countBits(diffBoard) != 1) {
         Serial.printf("[updateBoard] -> ERROR: diffBoard has %d bits\n", Chess::BitUtils::countBits(diffBoard));
-        currentState = SystemState::ERROR_RECOVERY;
+        // Accept the new sensor reading so subsequent single-square changes are
+        // diffed against the correct baseline, then refresh error highlights.
+        sensorOccupancy = static_cast<Chess::Bitboard>(newBoard);
+        enterErrorRecovery();
         return;
     }
 
@@ -108,6 +109,14 @@ void GameManager::updateBoard(uint64_t newBoard) {
     bool nowOccupied = Chess::BitUtils::readBit(static_cast<Chess::Bitboard>(newBoard), changedSq);
 
     updateSensorOccupancy(changedSq, nowOccupied);
+
+    // In error recovery, every sensor change re-evaluates the board against the
+    // last valid position and refreshes the LED highlights accordingly.
+    if (currentState == SystemState::ERROR_RECOVERY) {
+        Serial.println("[updateBoard] -> ERROR_RECOVERY: re-evaluating board");
+        handleErrorRecovery();
+        return;
+    }
 
     if (wasOccupied && !nowOccupied) {
         Serial.println("[updateBoard] -> calling handlePiecePickup");
@@ -125,6 +134,55 @@ void GameManager::updateSensorOccupancy(Chess::Square sq, bool occupied) {
     } else {
         Chess::BitUtils::clearBit(sensorOccupancy, sq);
     }
+}
+
+void GameManager::enterErrorRecovery() {
+    currentState = SystemState::ERROR_RECOVERY;
+
+    movePhase = MovePhase::IDLE;
+    attackingSquare = Chess::SQ_NONE;
+    capturedSquare = Chess::SQ_NONE;
+    pendingMove = Chess::Move();
+    rookFromSquare = Chess::SQ_NONE;
+    rookToSquare = Chess::SQ_NONE;
+    kingToSquare = Chess::SQ_NONE;
+    kingPlaced = false;
+    rookPlaced = false;
+
+    handleErrorRecovery();
+}
+
+void GameManager::handleErrorRecovery() {
+    Chess::Bitboard expected = currentBoard.getOccupancy();
+
+    // 3. Return to normal play state after
+    if (sensorOccupancy == expected) {
+        Serial.println("[ERROR_RECOVERY] Board matched expected state. Resuming PLAYING.");
+        currentState = SystemState::PLAYING;
+        resetMovePhase();
+        return;
+    }
+
+    clearAllLEDs();
+
+    Chess::Bitboard missing = expected & ~sensorOccupancy;
+    Chess::Bitboard tempMissing = missing;
+    while (tempMissing) {
+        Chess::Square sq = Chess::BitUtils::popLSB(tempMissing);
+        Chess::ChessColor color = currentBoard.colorAt(sq);
+        uint32_t ledColor = (color == Chess::ChessColor::White) ? WHITE_PIECES : BLACK_PIECES;
+        highlightSquare(sq / 8, sq % 8, ledColor);
+    }
+
+    // 2. Highlight squares that we detect an unexpected piece with ILLEGAL_PIECE_COLOR
+    Chess::Bitboard unexpected = sensorOccupancy & ~expected;
+    Chess::Bitboard tempUnexpected = unexpected;
+    while (tempUnexpected) {
+        Chess::Square sq = Chess::BitUtils::popLSB(tempUnexpected);
+        highlightSquare(sq / 8, sq % 8, ILLEGAL_PIECE_COLOR);
+    }
+
+    flushLEDBuffer(true);
 }
 
 // piece pickup
@@ -149,7 +207,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
     // CASTLING_BOTH_LIFTED: both pieces already in hand
     // No further pickups are valid; player should be placing pieces now.
     if (movePhase == MovePhase::CASTLING_BOTH_LIFTED || movePhase == MovePhase::CAPTURED_REMOVED) {
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 
@@ -160,7 +218,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             // Captured pawn removed — the move is now fully committed.
             executeMove(pendingMove);
         } else {
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
         }
         return;
     }
@@ -198,7 +256,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             }
 
         } else {
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
         }
 
         return;
@@ -242,7 +300,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
                 flushLEDBuffer();
             }
         } else {
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
         }
         return;
     }
@@ -265,7 +323,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
                 flushLEDBuffer();
             }
         } else {
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
         }
         return;
     }
@@ -285,7 +343,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
         if (!isOwnPiece || pieceType != Chess::PieceType::King) {
             Serial.printf("[CASTLING_ROOK_LIFTED] ERROR: expected own King, got pieceType=%d isOwn=%d sq=%d\n",
                           (int)pieceType, isOwnPiece, sq);
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
             return;
         }
         // King lifted — both pieces now in hand.
@@ -299,7 +357,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
     if (movePhase == MovePhase::IDLE) {
         if (!isOwnPiece || pieceType == Chess::PieceType::None) {
             // Touching the opponent's piece before your own is illegal.
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
             return;
         }
 
@@ -361,7 +419,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             }
 
             // neither legal capture nor legal en passant.
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
             return;
         }
 
@@ -370,12 +428,12 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
             // The attacker must be the king; the piece just lifted must be the rook on the correct side
             if (currentBoard.pieceAt(attackingSquare) != Chess::PieceType::King) {
                 // not a castling attempt - illegal move
-                currentState = SystemState::ERROR_RECOVERY;
+                enterErrorRecovery();
                 return;
             }
 
             if (pieceType != Chess::PieceType::Rook) {
-                currentState = SystemState::ERROR_RECOVERY;
+                enterErrorRecovery();
                 return;
             }
 
@@ -384,7 +442,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
                     "[ATTACKER_LIFTED] ERROR: own piece lifted at sq=%d but castle resolve failed (attacker=%d, "
                     "pieceType=%d)\n",
                     sq, attackingSquare, (int)pieceType);
-                currentState = SystemState::ERROR_RECOVERY;
+                enterErrorRecovery();
                 return;
             }
             Serial.printf("[ATTACKER_LIFTED] Castle resolved: kingTo=%d rookTo=%d\n", kingToSquare, rookToSquare);
@@ -403,7 +461,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
         }
 
         // Square is empty on the logical board — invalid pickup.
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 }
@@ -435,7 +493,7 @@ void GameManager::handlePiecePickup(Chess::Square sq) {
 void GameManager::handlePiecePlacement(Chess::Square sq) {
     // IDLE: nothing in hand
     if (movePhase == MovePhase::IDLE) {
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 
@@ -462,7 +520,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         }
         Serial.printf("[CASTLING_ROOK_LIFTED] ERROR: placement on sq=%d (rookFrom=%d, rookTo=%d, kingTo=%d)\n", sq,
                       rookFromSquare, rookToSquare, kingToSquare);
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 
@@ -475,7 +533,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         }
         Serial.printf("[CASTLING_ROOK_PLACED] ERROR: unexpected placement on sq=%d (expected kingTo=%d)\n", sq,
                       kingToSquare);
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 
@@ -543,7 +601,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
             return;
         }
         Serial.printf("[CASTLING_KING_LIFTED] ERROR: placement on sq=%d\n", sq);
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 
@@ -557,7 +615,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         }
         Serial.printf("[CASTLING_KING_PLACED] ERROR: unexpected placement on sq=%d (expected rookTo=%d)\n", sq,
                       rookToSquare);
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 
@@ -574,12 +632,12 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
             if (sq == Chess::SQ_G1 || sq == Chess::SQ_G8 || sq == Chess::SQ_C1 || sq == Chess::SQ_C8) {
                 Chess::Move castleMove;
                 if (!findLegalMove(attackingSquare, sq, castleMove)) {
-                    currentState = SystemState::ERROR_RECOVERY;
+                    enterErrorRecovery();
                     return;
                 }
                 uint16_t flag = castleMove.getFlags();
                 if (flag < 2 || flag > 3) {
-                    currentState = SystemState::ERROR_RECOVERY;
+                    enterErrorRecovery();
                     return;
                 }
 
@@ -631,7 +689,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         // normal non capture move
         Chess::Move move;
         if (!findLegalMove(attackingSquare, sq, move)) {
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
             return;
         }
 
@@ -643,7 +701,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
     // wait for the captured pawn to be physically removed
     if (movePhase == MovePhase::EP_ATTACKER_PLACED) {
         // No placement is valid while waiting for the captured pawn removal
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 
@@ -652,7 +710,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         // Attacker must land exactly on the move destination (diagonal square
         // for en passant, captured square for normal captures)
         if (sq != pendingMove.getTo()) {
-            currentState = SystemState::ERROR_RECOVERY;
+            enterErrorRecovery();
             return;
         }
 
@@ -701,7 +759,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
             return;
         }
         // Placed on an unexpected square.
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         return;
     }
 }
@@ -710,7 +768,7 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
 void GameManager::executeMove(Chess::Move move) {
     bool success = currentBoard.makeMove(move);
     if (!success) {
-        currentState = SystemState::ERROR_RECOVERY;
+        enterErrorRecovery();
         resetMovePhase();
         return;
     }

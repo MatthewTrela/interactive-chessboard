@@ -1,10 +1,10 @@
 #include "task.h"
 
 #include "Chess/game_manager.h"
-#include "IO/io_expander.h"
-#include "global.h"
 #include "IO/display_manager.h"
 #include "IO/encoder.h"
+#include "IO/io_expander.h"
+#include "global.h"
 
 TaskHandle_t GameLoopTaskHandle = NULL;
 TaskHandle_t UITaskHandle = NULL;
@@ -41,6 +41,7 @@ void gameLoopTask(void* pvParameters) {
             case SystemState::ERROR_RECOVERY:
                 // TODO: show error on OLED
                 Serial.println("We in error");
+                game.updateBoard(newOccupancy);
                 break;
             case SystemState::GAME_OVER:
                 // TODO: show game over
@@ -66,8 +67,7 @@ void UITask(void* pvParameters) {
                 EncoderData d = encoder->getData(p);
                 uiManager->handleInput(p + 1, d.leftSpin, d.rightSpin, d.buttonPressed);
             }
-        } 
-        else {     
+        } else {
             if (game.getState() == SystemState::PLAYING) {
                 if (game.getBoard().getSideToMove() == Chess::ChessColor::White) {
                     uiManager->updateTime(1);

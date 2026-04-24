@@ -84,6 +84,12 @@ class GameManager {
     bool kingPlaced, rookPlaced;
 
     // internal helper methods
+    /// Sets ERROR_RECOVERY state, clears move-phase, and immediately renders
+    /// the mismatch highlights. Use instead of setting currentState directly.
+    void enterErrorRecovery();
+    /// Re-evaluates the physical board against the last valid position and
+    /// updates LED highlights. Exits ERROR_RECOVERY if the board matches.
+    void handleErrorRecovery();
     void updateSensorOccupancy(Chess::Square sq, bool occupied);
     void handlePiecePickup(Chess::Square sq);
     void handlePiecePlacement(Chess::Square sq);
