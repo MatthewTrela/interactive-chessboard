@@ -7,9 +7,10 @@
 #include "global.h"
 
 enum class MenuHighlight {None};
-enum class Screen {MainMenu, PlayingMenu, OptionsMenu, GameOver};
-enum class PlayingHighlight { None, Settings, Undo, Square};
-enum class OptionsHighlight{ None, Back, LegalMoves, BestMoves, Reset};
+enum class Screen {MainMenu, PlayingMenu, OptionsMenu, GameOver, Promotion};
+enum class PlayingHighlight {None, Settings, Undo, Square};
+enum class OptionsHighlight{None, Back, LegalMoves, BestMoves, Reset};
+enum class PromotionHighlight{Queen, Knight, Bishop, Rook};
 
 struct PlayerUIState {
     Screen screen = Screen::MainMenu;
@@ -29,6 +30,7 @@ struct PlayerUIState {
     char timeStr[6] = "10:00";
     int lastDisplayedSeconds = -1;
     bool timeLocked = false;
+    uint8_t promotionIndex = 0;
 };
 
 class DisplayManager {
@@ -55,6 +57,7 @@ public:
     void drawPlayingMenu(int playerID, PlayingHighlight highlight);
     void drawOptionsMenu(int playerID, OptionsHighlight highlight);
     void drawGameOver(int playerID, const char* reason);
+    void drawPromotionMenu(int playerID, PromotionHighlight highlight);
 
     // Timer methods for handeling clock
     // ------------------------------------------------------------------------------
@@ -80,20 +83,36 @@ public:
     // Transition to gameover screen with reason for loss
     void notifyGameEnd(const char* reason);
 
+    // Block the game and wait until the user picks a promotion piece
+    Chess::PieceType waitForPromotion(int playerID);
+
     const PlayerUIState& getState(int playerID) const {
         return uiState[playerID - 1];
     }
 
 private:
+    // OLED objects
     Adafruit_SSD1306 displayP1;
     Adafruit_SSD1306 displayP2;
 
+    // State information for each user
     PlayerUIState uiState[2];
+
+    // Reason for loss on game over
     char lossReason[64] = {};
 
+    // Private promotion variables
+    SemaphoreHandle_t promotionSemaphore = nullptr;
+    Chess::PieceType promotionResult = Chess::PieceType::Queen;
+    int promotingPlayer = 0;
+
+    // Drawing symbol helpers
     static void drawGear (Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color);
     static void drawSquareIcon(Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color);
     static void drawToggle(Adafruit_SSD1306* d, uint8_t x, uint8_t y, bool on);
+
+    // Highlight index to enum helpers
+    static PromotionHighlight promHL(uint8_t index);
     static MenuHighlight menuHL(uint8_t index);
     static OptionsHighlight optHL (uint8_t index);
     static PlayingHighlight playHL(uint8_t index);
