@@ -97,6 +97,16 @@ I figured out a better way to model the chess pieces such that they trigger the 
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/554dfb44-2c88-4eb4-9534-a4367b56f791" />
 
 ## 4/13/26
-I modeled and printed the rest of the chess pieces.
+I modeled and printed the rest of the chess pieces. Something I noticed with more chess pieces is that if two pieces get close, they will snap together. This is a product of the chess pieces being very light, and the magnetic strength being stronger due to two magnets on the bottom. Our chess squares are far enough apart so that this isn't an issue when the pieces are just sitting idle on the board, but it is something to keep in mind for captures. I don't know if there is a good way to fix this and I feel the tradeoff of triggering the reed switchs every time is worth it.
+
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/af9c368d-93fb-40a4-ad5d-5457a7a4bcfb" />
+
+## 4/16/26
+Now that most of the physical aspects of this project are taken care of, I switched to supporting Tim on the software side. Today I spent some time reorganizing our files and putting them into folders for better organization. I also spent some time writing a chess class which will track the current state of the chess board and calculate all the legal moves for any chess position. I had to write our own because existing chess libraries use this optimization called "magic bit boards". This optimization exists to To make calculating legal moves easier by precalculating every move pattern for every piece for every position on a chessboard individually. It makes calculating legal moves a very simple binary operation, but it takes up arround 1 MB of space which is too much for our microcontroller. Our chess backend uses a varriation of magic bitboards called rays which is slower to calculate but more memory efficient. 
+
+## 4/19/26
+JJ finished soldering our main PCB board today, but Tim and I have had difficulty integrating it with the rest of our system. We ran into the classic problem of measuring zero voltage across our reed switches. We also were running into the problem that nothing would print to the serial terminal, and that pressing reset on the main PCB didn't do anything. Similar to the last time this bug happened we figured out that the issue with the reed switches not turning on is we had the SPI configured backwards. Fixing that, we got all of our reed switches to trigger with the main PCB. The serial problem was just an issue with our platform configuration settings. With the devkit we were flashing with UART but our PCB flashes with USB, so we had to update that in our config accordingly. Lastly, JJ figured out that the reset issue was happening due to an error with the routing on our PCB. JJ was able to fix that by soldering some additional wires to fix it on our PCB. With all of these errors fixed we are now setup to finish up the software side of things.
+
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/b1d22d06-4159-4145-8a04-a5ac578fc6ba" />
 
 
