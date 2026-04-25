@@ -4,7 +4,7 @@
 
 #include "chess.hpp"
 
-enum class SystemState { MAIN_MENU, INIT, PLAYING, ERROR_RECOVERY, GAME_OVER, IDLE };
+enum class SystemState { MAIN_MENU, INIT, PLAYING, ERROR_RECOVERY, GAME_OVER, PROMOTION_SELECTION, IDLE };
 
 struct PlayerSettings {
     bool showBestMove;
@@ -60,6 +60,9 @@ class GameManager {
     SystemState getState();
     void setState(SystemState state) { currentState = state; }
     bool isDebouncing() const { return debounceStartTime != 0; }
+    Chess::PieceType getPromotionChoice() const { return promotionChoice; }
+    void setPromotionChoice(Chess::PieceType pt) { promotionChoice = pt; }
+    void finalizePromotion();
 
    private:
     // game state
@@ -85,6 +88,12 @@ class GameManager {
     Chess::Square kingToSquare;    // king destination
     // Set during castling placement phase
     bool kingPlaced, rookPlaced;
+
+    // Promotion related logic
+    Chess::Square promotionFrom;
+    Chess::Square promotionTo;
+    bool promotionIsCapture;
+    Chess::PieceType promotionChoice;
 
     // internal helper methods
     /// Sets ERROR_RECOVERY state, clears move-phase, and immediately renders

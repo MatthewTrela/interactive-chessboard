@@ -28,7 +28,7 @@ DisplayManager::DisplayManager()
       displayP2(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, OLED_RESET) {}
 
 bool DisplayManager::begin() {
-    promotionSemaphore = xSemaphoreCreateBinary();
+    // promotionSemaphore = xSemaphoreCreateBinary();
     Wire.begin(P1_SDA, P1_SCL);
     Wire1.begin(P2_SDA, P2_SCL);
 
@@ -77,8 +77,7 @@ void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bo
                     }
                 } else if (leftSpin) {
                     uiState[0].totalSeconds -= 15;
-                    if (uiState[0].totalSeconds < 15)
-                        uiState[0].totalSeconds = 15;
+                    if (uiState[0].totalSeconds < 15) uiState[0].totalSeconds = 15;
                 }
 
                 uiState[1].totalSeconds = uiState[0].totalSeconds;
@@ -141,7 +140,7 @@ void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bo
                 s.needsRedraw = true;
             }
         } else if (buttonPressed) {
-            if (s.optionsIndex == 0) {         // Return back to playing screen
+            if (s.optionsIndex == 0) {  // Return back to playing screen
                 s.screen = Screen::PlayingMenu;
             } else if (s.optionsIndex == 1) {  // legal moves option
                 s.legalMoves = !s.legalMoves;
@@ -179,16 +178,25 @@ void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bo
             s.needsRedraw = true;
         } else if (buttonPressed) {
             switch (promHL(s.promotionIndex)) {
-                case PromotionHighlight::Queen: promotionResult = Chess::PieceType::Queen; break;
-                case PromotionHighlight::Knight: promotionResult = Chess::PieceType::Knight; break;
-                case PromotionHighlight::Bishop: promotionResult = Chess::PieceType::Bishop; break;
-                case PromotionHighlight::Rook: promotionResult = Chess::PieceType::Rook; break;
+                case PromotionHighlight::Queen:
+                    promotionResult = Chess::PieceType::Queen;
+                    break;
+                case PromotionHighlight::Knight:
+                    promotionResult = Chess::PieceType::Knight;
+                    break;
+                case PromotionHighlight::Bishop:
+                    promotionResult = Chess::PieceType::Bishop;
+                    break;
+                case PromotionHighlight::Rook:
+                    promotionResult = Chess::PieceType::Rook;
+                    break;
             }
 
             s.screen = Screen::PlayingMenu;
             s.needsRedraw = true;
 
-            xSemaphoreGive(promotionSemaphore);
+            // xSemaphoreGive(promotionSemaphore);
+            promotionComplete = true;
         }
     }
 }
@@ -223,7 +231,7 @@ void DisplayManager::resetState(int playerID) {
 
     uiState[playerID - 1] = PlayerUIState{};
     uiState[playerID - 1].totalSeconds = savedTime;
-    uiState[playerID - 1].remainingMs = savedTime*1000;
+    uiState[playerID - 1].remainingMs = savedTime * 1000;
     uiState[playerID - 1].legalMoves = savedLegal;
     uiState[playerID - 1].bestMoves = savedBest;
 
@@ -280,12 +288,12 @@ void DisplayManager::updateTime(int playerID) {
 void DisplayManager::setTimeControl(int seconds) {
     for (int i = 0; i < 2; i++) {
         uiState[i].totalSeconds = seconds;
-        uiState[i].remainingMs = seconds*1000;
+        uiState[i].remainingMs = seconds * 1000;
         uiState[i].clockRunning = false;
         uiState[i].lastTickMs = 0;
         uiState[i].lastDisplayedSeconds = -1;
-        int m = seconds/60;
-        int s = seconds%60;
+        int m = seconds / 60;
+        int s = seconds % 60;
         snprintf(uiState[i].timeStr, sizeof(uiState[i].timeStr), "%02d:%02d", m, s);
         uiState[i].needsRedraw = true;
     }
@@ -297,9 +305,7 @@ void DisplayManager::startClock(int playerID) {
     s.lastTickMs = millis();
 }
 
-void DisplayManager::pauseClock(int playerID) {
-    uiState[playerID - 1].clockRunning = false;
-}
+void DisplayManager::pauseClock(int playerID) { uiState[playerID - 1].clockRunning = false; }
 
 void DisplayManager::resumeClock(int playerID) {
     PlayerUIState& s = uiState[playerID - 1];
@@ -307,17 +313,21 @@ void DisplayManager::resumeClock(int playerID) {
     s.lastTickMs = millis();
 }
 
-Chess::PieceType DisplayManager::waitForPromotion(int playerID) {
+void DisplayManager::startPromotion(int playerID) {
     promotingPlayer = playerID;
+    promotionComplete = false;
+    promotionResult = Chess::PieceType::Queen;
 
     uiState[playerID - 1].screen = Screen::Promotion;
     uiState[playerID - 1].promotionIndex = 0;
     uiState[playerID - 1].needsRedraw = true;
-
-    // Block and wait until user picks a promotion option
-    xSemaphoreTake(promotionSemaphore, portMAX_DELAY);
-    return promotionResult;
 }
+
+void DisplayManager::clearPromotionState() { promotionComplete = false; }
+
+bool DisplayManager::isPromotionComplete() const { return promotionComplete; }
+
+Chess::PieceType DisplayManager::getPromotionResult() const { return promotionResult; }
 
 void DisplayManager::drawGrid(int playerID, uint64_t boardState) {
     Adafruit_SSD1306* display;
@@ -364,16 +374,16 @@ void DisplayManager::drawMainMenu(int playerID, MenuHighlight highlight) {
     PlayerUIState& s = uiState[playerID - 1];
 
     display->clearDisplay();
-    
+
     const int titleY = 14;
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-    display->setCursor(12, titleY); 
+    display->setCursor(12, titleY);
     display->print("Main Menu");
 
     const int labelY = titleY + 16;
-    const int timeY  = labelY + 12;
-    const int arrowY = timeY + 8; 
+    const int timeY = labelY + 12;
+    const int arrowY = timeY + 8;
 
     if (!s.timeLocked) {
         display->setTextSize(1);
@@ -414,13 +424,13 @@ void DisplayManager::drawPlayingMenu(int playerID, PlayingHighlight highlight) {
 
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-    display->setCursor(38, 10); 
+    display->setCursor(38, 10);
     display->print(s.timeStr);
-    
+
     display->setTextSize(1);
     display->drawLine(0, 28, 127, 28, SSD1306_WHITE);
 
-    const uint8_t CY = 50; 
+    const uint8_t CY = 50;
 
     struct Item {
         PlayingHighlight val;
@@ -464,8 +474,8 @@ void DisplayManager::drawOptionsMenu(int playerID, OptionsHighlight highlight) {
     display->clearDisplay();
     display->setTextSize(1);
     display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-    
-    display->setCursor(34, 10); 
+
+    display->setCursor(34, 10);
     display->print("OPTIONS");
     display->drawLine(0, 20, 127, 20, SSD1306_WHITE);
 
@@ -512,7 +522,7 @@ void DisplayManager::drawGameOver(int playerID, const char* reason) {
 
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-    display->setCursor(10, 16); 
+    display->setCursor(10, 16);
     display->print("Game Over");
 
     display->setTextSize(1);
@@ -524,11 +534,11 @@ void DisplayManager::drawGameOver(int playerID, const char* reason) {
 
     if (reasonX < 0) reasonX = 0;
 
-    display->setCursor(reasonX, 38); 
+    display->setCursor(reasonX, 38);
     display->print(reason);
 
     display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    display->setCursor(31, 56); 
+    display->setCursor(31, 56);
     display->print("Play again?");
 
     display->display();
@@ -619,36 +629,51 @@ void DisplayManager::drawToggle(Adafruit_SSD1306* d, uint8_t x, uint8_t y, bool 
 
 MenuHighlight DisplayManager::menuHL(uint8_t i) {
     switch (i) {
-        default: return MenuHighlight::None;
+        default:
+            return MenuHighlight::None;
     }
 }
 
 PlayingHighlight DisplayManager::playHL(uint8_t i) {
     switch (i) {
-        case 0: return PlayingHighlight::Settings;
-        case 1: return PlayingHighlight::Undo;
-        case 2: return PlayingHighlight::Square;
-        default: return PlayingHighlight::None;
+        case 0:
+            return PlayingHighlight::Settings;
+        case 1:
+            return PlayingHighlight::Undo;
+        case 2:
+            return PlayingHighlight::Square;
+        default:
+            return PlayingHighlight::None;
     }
 }
 
 OptionsHighlight DisplayManager::optHL(uint8_t i) {
     switch (i) {
-        case 0: return OptionsHighlight::Back;
-        case 1: return OptionsHighlight::LegalMoves;
-        case 2: return OptionsHighlight::BestMoves;
-        case 3: return OptionsHighlight::Reset;
-        default: return OptionsHighlight::None;
+        case 0:
+            return OptionsHighlight::Back;
+        case 1:
+            return OptionsHighlight::LegalMoves;
+        case 2:
+            return OptionsHighlight::BestMoves;
+        case 3:
+            return OptionsHighlight::Reset;
+        default:
+            return OptionsHighlight::None;
     }
 }
 
 PromotionHighlight DisplayManager::promHL(uint8_t i) {
     switch (i) {
-        case 0: return PromotionHighlight::Queen;
-        case 1: return PromotionHighlight::Knight;
-        case 2: return PromotionHighlight::Bishop;
-        case 3: return PromotionHighlight::Rook;
-        default: return PromotionHighlight::Queen;
+        case 0:
+            return PromotionHighlight::Queen;
+        case 1:
+            return PromotionHighlight::Knight;
+        case 2:
+            return PromotionHighlight::Bishop;
+        case 3:
+            return PromotionHighlight::Rook;
+        default:
+            return PromotionHighlight::Queen;
     }
 }
 

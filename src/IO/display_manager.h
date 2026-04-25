@@ -3,14 +3,15 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
+
 #include "Chess/chess.hpp"
 #include "global.h"
 
-enum class MenuHighlight {None};
-enum class Screen {MainMenu, PlayingMenu, OptionsMenu, GameOver, Promotion};
-enum class PlayingHighlight {None, Settings, Undo, Square};
-enum class OptionsHighlight{None, Back, LegalMoves, BestMoves, Reset};
-enum class PromotionHighlight{Queen, Knight, Bishop, Rook};
+enum class MenuHighlight { None };
+enum class Screen { MainMenu, PlayingMenu, OptionsMenu, GameOver, Promotion };
+enum class PlayingHighlight { None, Settings, Undo, Square };
+enum class OptionsHighlight { None, Back, LegalMoves, BestMoves, Reset };
+enum class PromotionHighlight { Queen, Knight, Bishop, Rook };
 
 struct PlayerUIState {
     Screen screen = Screen::MainMenu;
@@ -34,10 +35,10 @@ struct PlayerUIState {
 };
 
 class DisplayManager {
-public:
+   public:
     DisplayManager();
 
-    //Conect displays to I2C bus
+    // Conect displays to I2C bus
     bool begin();
 
     // Where all drawing methods are called
@@ -70,7 +71,7 @@ public:
     // Set the time each player gets to make all moves
     void setTimeControl(int seconds);
 
-    // Pauses clock when gameboard is in error state 
+    // Pauses clock when gameboard is in error state
     void pauseClock(int playerID);
 
     // Resumes clock when gameboard leaves error state
@@ -83,14 +84,14 @@ public:
     // Transition to gameover screen with reason for loss
     void notifyGameEnd(const char* reason);
 
-    // Block the game and wait until the user picks a promotion piece
-    Chess::PieceType waitForPromotion(int playerID);
+    const PlayerUIState& getState(int playerID) const { return uiState[playerID - 1]; }
 
-    const PlayerUIState& getState(int playerID) const {
-        return uiState[playerID - 1];
-    }
+    void startPromotion(int playerID);
+    void clearPromotionState();
+    bool isPromotionComplete() const;
+    Chess::PieceType getPromotionResult() const;
 
-private:
+   private:
     // OLED objects
     Adafruit_SSD1306 displayP1;
     Adafruit_SSD1306 displayP2;
@@ -102,19 +103,19 @@ private:
     char lossReason[64] = {};
 
     // Private promotion variables
-    SemaphoreHandle_t promotionSemaphore = nullptr;
     Chess::PieceType promotionResult = Chess::PieceType::Queen;
     int promotingPlayer = 0;
+    bool promotionComplete;
 
     // Drawing symbol helpers
-    static void drawGear (Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color);
+    static void drawGear(Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color);
     static void drawSquareIcon(Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color);
     static void drawToggle(Adafruit_SSD1306* d, uint8_t x, uint8_t y, bool on);
 
     // Highlight index to enum helpers
     static PromotionHighlight promHL(uint8_t index);
     static MenuHighlight menuHL(uint8_t index);
-    static OptionsHighlight optHL (uint8_t index);
+    static OptionsHighlight optHL(uint8_t index);
     static PlayingHighlight playHL(uint8_t index);
     Adafruit_SSD1306* getDisplay(int playerID);
 };

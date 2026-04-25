@@ -37,6 +37,12 @@ void gameLoopTask(void* pvParameters) {
             case SystemState::PLAYING:
                 game.updateBoard(newOccupancy);
                 break;
+            case SystemState::PROMOTION_SELECTION:
+                // The UI task will set promotionChoice and notify us.
+                if (game.getPromotionChoice() != Chess::PieceType::None) {
+                    game.finalizePromotion();
+                }
+                break;
             case SystemState::ERROR_RECOVERY:
                 // TODO: show error on OLED
                 game.updateBoard(newOccupancy);
@@ -65,6 +71,15 @@ void UITask(void* pvParameters) {
 
         SystemState currentState = game.getState();
         Chess::ChessColor currentSide = game.getBoard().getSideToMove();
+
+        if (currentState == SystemState::PROMOTION_SELECTION) {
+            // Set up the promotion screen once (if not already showing)
+            if (uiManager->getState(1).screen != Screen::Promotion &&
+                uiManager->getState(2).screen != Screen::Promotion) {
+                int player = (currentSide == Chess::ChessColor::White) ? 1 : 2;
+                uiManager->startPromotion(player);
+            }
+        }
 
         if (currentState != prevState) {
             if (currentState == SystemState::PLAYING) {
@@ -106,6 +121,11 @@ void UITask(void* pvParameters) {
             for (uint8_t p = 0; p < 2; p++) {
                 EncoderData d = encoder->getData(p);
                 uiManager->handleInput(p + 1, d.leftSpin, d.rightSpin, d.buttonPressed);
+                if (uiManager->isPromotionComplete()) {
+                    game.setPromotionChoice(uiManager->getPromotionResult());
+                    uiManager->clearPromotionState();
+                    xTaskNotifyGive(GameLoopTaskHandle);
+                }
             }
         } else {
             if (currentState == SystemState::PLAYING) {

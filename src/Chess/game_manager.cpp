@@ -678,6 +678,17 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
             return;
         }
 
+        // promotion path
+        if (move.isPromotion()) {
+            promotionFrom = move.getFrom();
+            promotionTo = move.getTo();
+            promotionIsCapture = move.isCapture();  // should be false
+            promotionChoice = Chess::PieceType::None;
+            currentState = SystemState::PROMOTION_SELECTION;
+            resetMovePhase();
+            return;
+        }
+
         executeMove(move);
         return;
     }
@@ -696,6 +707,18 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
         // for en passant, captured square for normal captures)
         if (sq != pendingMove.getTo()) {
             enterErrorRecovery();
+            return;
+        }
+
+        // promotion path
+        if (pendingMove.isPromotion()) {
+            promotionFrom = pendingMove.getFrom();
+            promotionTo = pendingMove.getTo();
+            promotionIsCapture = true;
+            promotionChoice = Chess::PieceType::None;
+            currentState = SystemState::PROMOTION_SELECTION;
+            resetMovePhase();
+            // Optionally turn off all LEDs or show a “promotion pending” indicator
             return;
         }
 
@@ -936,6 +959,40 @@ void GameManager::checkGameEndConditions() {
     if (players[playerIndex].showBestMove) {
         // TODO: show best move
     }
+}
+
+void GameManager::finalizePromotion() {
+    if (promotionChoice == Chess::PieceType::None) return;
+
+    if (!Chess::BitUtils::readBit(sensorOccupancy, promotionTo)) {
+        // Pawn was removed unexpectedly
+        enterErrorRecovery();
+        promotionChoice = Chess::PieceType::None;
+        return;
+    }
+
+    // Convert chosen piece type to move flags according to promotion encoding.
+    // The flag table: quiet promotions = 8..11; capture promotions = 12..15.
+    // For each, lower two bits encode the piece: Knight=0, Bishop=1, Rook=2, Queen=3.
+    int pieceIndex = static_cast<int>(promotionChoice) - static_cast<int>(Chess::PieceType::Knight);
+    // pieceChoice is Knight/Bishop/Rook/Queen: map them to 0-3
+    uint16_t baseFlag = promotionIsCapture ? 12 : 8;
+    uint16_t flags = baseFlag + pieceIndex;
+
+    Chess::Move finalMove(promotionFrom, promotionTo, flags);
+
+    bool ok = currentBoard.makeMove(finalMove);
+    if (!ok) {
+        enterErrorRecovery();
+        resetMovePhase();
+        return;
+    }
+
+    currentState = SystemState::PLAYING;
+    resetMovePhase();
+    // Notify the UI task that state changed (so it exits the promotion menu)
+    // The game loop will handle that notification in its next iteration.
+    checkGameEndConditions();
 }
 
 PlayerSettings& GameManager::getSettings(uint8_t player) { return players[player]; }
