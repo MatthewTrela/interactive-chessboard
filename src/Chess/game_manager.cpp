@@ -661,6 +661,9 @@ void GameManager::handlePiecePlacement(Chess::Square sq) {
             int epFile = static_cast<int>(sq) % 8;
             capturedSquare = static_cast<Chess::Square>(epRank * 8 + epFile);
             movePhase = MovePhase::EP_ATTACKER_PLACED;
+            clearAllLEDs();
+            highlightSquare(capturedSquare / 8, capturedSquare % 8, ILLEGAL_PIECE_COLOR);
+            flushLEDBuffer();
             return;
         }
 
