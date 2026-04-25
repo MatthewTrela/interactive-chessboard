@@ -30,12 +30,16 @@ void GameManager::init() {
     players[0] = PlayerSettings{true, true};
     players[1] = PlayerSettings{true, true};
 
-    currentState = SystemState::INIT;
+    currentState = SystemState::MAIN_MENU;
     resetMovePhase();
-    lightAllStartingSquares(sensorOccupancy);
 }
 
 // Public methods
+void GameManager::reset() {
+    currentBoard.reset();
+    currentState = SystemState::MAIN_MENU;
+    resetMovePhase();
+}
 
 void GameManager::updateInitialization(uint64_t sensorState) {
     // Update sensor occupancy

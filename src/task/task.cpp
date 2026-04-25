@@ -11,9 +11,6 @@ TaskHandle_t UITaskHandle = NULL;
 TaskHandle_t EngineTaskHandle = NULL;
 
 void gameLoopTask(void* pvParameters) {
-    uint64_t startOccupancy = readBoardBitmap();
-    game.updateInitialization(startOccupancy);
-
     for (;;) {
         SystemState state = game.getState();
         TickType_t waitTime;
@@ -34,19 +31,19 @@ void gameLoopTask(void* pvParameters) {
             case SystemState::INIT:
                 game.updateInitialization(newOccupancy);
                 break;
+            case SystemState::MAIN_MENU:
+
+                break;
             case SystemState::PLAYING:
-                Serial.println("We in playing");
                 game.updateBoard(newOccupancy);
                 break;
             case SystemState::ERROR_RECOVERY:
                 // TODO: show error on OLED
-                Serial.println("We in error");
                 game.updateBoard(newOccupancy);
                 break;
             case SystemState::GAME_OVER:
                 // TODO: show game over
                 uiManager->notifyGameEnd("reason");
-                Serial.println("We in game over");
                 break;
             default:
                 break;
