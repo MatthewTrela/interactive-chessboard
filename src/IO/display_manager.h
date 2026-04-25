@@ -6,8 +6,9 @@
 #include "Chess/chess.hpp"
 #include "global.h"
 
-enum class Screen {MainMenu, OptionsMenu, GameOver};
-enum class MenuHighlight { None, Settings, Undo, Square};
+enum class MenuHighlight {None};
+enum class Screen {MainMenu, PlayingMenu, OptionsMenu, GameOver};
+enum class PlayingHighlight { None, Settings, Undo, Square};
 enum class OptionsHighlight{ None, LegalMoves, BestMoves, Reset};
 
 struct PlayerUIState {
@@ -21,6 +22,7 @@ struct PlayerUIState {
     bool needsRedraw = false;
     char timeStr[6] = "10:00"; 
     int lastSeconds = -1;
+    bool timeLocked = false;
 };
 
 class DisplayManager {
@@ -30,9 +32,9 @@ public:
     bool begin();
     void updateDisplays();
     void handleInput(int playerID, bool leftSpin, bool rightSpin, bool buttonPressed);
-    void printMessage(int playerID, int line, const String& message, bool instantUpdate = false);
     void drawGrid(int playerID, uint64_t boardState);
     void drawMainMenu(int playerID, MenuHighlight highlight);
+    void drawPlayingMenu(int playerID, PlayingHighlight highlight);
     void drawOptionsMenu(int playerID, OptionsHighlight highlight);
     void drawGameOver(int playerID, const char* reason);
     void updateTime(int playerID);
@@ -57,5 +59,6 @@ private:
     static void drawToggle(Adafruit_SSD1306* d, uint8_t x, uint8_t y, bool on);
     static MenuHighlight menuHL(uint8_t index);
     static OptionsHighlight optHL (uint8_t index);
+    static PlayingHighlight playHL(uint8_t index);
     Adafruit_SSD1306* getDisplay(int playerID);
 };

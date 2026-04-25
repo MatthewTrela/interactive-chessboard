@@ -4,7 +4,7 @@
 
 #include "chess.hpp"
 
-enum class SystemState { MAIN_MENU, INIT, PLAYING, ERROR_RECOVERY, GAME_OVER };
+enum class SystemState { MAIN_MENU, INIT, PLAYING, ERROR_RECOVERY, GAME_OVER, IDLE };
 
 struct PlayerSettings {
     bool showBestMove;
@@ -41,6 +41,9 @@ class GameManager {
 
     // reset to starting position
     void init();
+
+    // Turn off all LEDs, reset board, and enter main menu state
+    void reset();
 
     void updateInitialization(uint64_t sensorState);
 
