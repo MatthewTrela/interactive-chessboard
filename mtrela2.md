@@ -85,3 +85,18 @@ I was able to print the new chessboard, and it works a lot better. I figured out
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/ec50feae-6ec4-4b56-ad0b-998542c7f672" />
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/16dc37be-b4e4-4c8c-9d29-a9d413d9aa59" />
 
+## 4/11/26
+The next thing I am working on is printing our actual chess pieces. I found a set of already modeled chess pieces online which were allowed for commercial use. They were modeled by Jacob G, and can be found at this [link](https://www.printables.com/model/32741-chess-set/files). I needed to modify them slightly by making them smaller to fit the size of our smaller chessboard and also by adding a hole on the bottom for a magnet. I printed one pawn as a test and I am running into this problem where detection of the piece is very spotty. It works like 1/3 of the time when placing the pawn on a square
+
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/5c16fe44-c007-45c5-9312-da8d00f1862d" />
+
+## 4/12/26
+I figured out a better way to model the chess pieces such that they trigger the reed switch every time. I noticed that if the magnet is in the dead center of the reed switch it doesn't actually trigger. It only triggers when the magnet is a little bit off center, over one of the edges of the reed switch. With this figured out, if I put two magnets under the chess piece lined up diagonally with the reed switch, the magnets are now at the edges when the piece is in the center of the square and the chances of triggering the switch are doubled. This new method triggers the reed switch every time, and has the nice property of forcing the chess piece to a certain orientation, like forcing the knight to face forward.
+
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/d48000c6-b2fc-4820-bfd1-0fd341c97066" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/554dfb44-2c88-4eb4-9534-a4367b56f791" />
+
+## 4/13/26
+I modeled and printed the rest of the chess pieces.
+
+
