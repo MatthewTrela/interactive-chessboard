@@ -20,6 +20,9 @@ We are finalizing some details of our design and working on getting things order
 ## 2/23/26
 The first PCB order is due this week on Tuesday, so this weekend I spent most of my time working on the schematic and physical route of the sensor PCB board. It is not a very complicated board, so hopefully this first version is enough and we don't have to order another one. I added pull-up resistors for reset and chip select and then some other resistors to dampen reflection and noise. I also added a capacitor to the power side of the GPIO expander which should help keep the voltage input stable. This should account for most errors that could arise from this board. The only other thing to consider is if our current header setup will fit with the shell we get from the machine shop. Looking ahead we have the design document due this week and the breadboard demo due the following week.
 
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/6f904151-b655-42e1-8979-f74b2002d678" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/aa3e02f2-3bee-4abb-85a5-555e0ba76012" />
+
 ## 3/2/26
 Today we presented our design document and did the peer review. In one week we have the breadboard demo, so most of this week we are planning to work on that. The plan right now is to have the MCU connected to the GPIO expander which is connected to 16 reed switches. Instead of messing with LEDs, we want to display our chessboard state on an OLED display. I set up our repository with libraries and gave us a starting point for the breadboard demo. I used eclipse as the IDE and set up a LED strip blinking template using Espressif. In terms of next steps for the repository, we need to find the library for the OLED display we are using and set up the gpio expander. 
 
@@ -68,4 +71,17 @@ Tim finished soldering all of the sensor PCB boards, and he was able to connect 
 
 ## 4/7/26
 Tim was able to get all 4 boards working for the demo. The problem ended up being the pin header on the fourth board. After he added more solder to it, and then used the head gun on the shorted pins, our sensor boards worked flawlessly. For the demo we wanted to show that a magnet on a reed switch activates the LED below it. Unfortunately, we never finished mapping the reed switch that triggers to its physical location on the chessboard. We got it working for some, but during the progress demo triggering most of the reed switches would trigger an LED in a different location. Tim got the mapping working after the demo so we are all good now. JJ had some problems with the buck converter on our main PCB board, so for the demo we didn't use an ESP32-S3 soldered to a PCB and instead used a breadboard and a devkit. We are supposed to get our 4th round PCB board later this week anyways, so we are planning to integrate the main PCB board once we get the order and JJ finishes soldering it. The next thing I’m working on is a redesign of our 3D printed chessboard.
+
+## 4/8/26
+I remodeled the chessboard. The main changes I made were reducing the height of the grid that extends below the chessboard, getting rid of the tunnel for mounting the LEDs sideways, and adding a circular cutout underneath every chess square to let more light through. In the area where the circle is cutout, the top layer is 0.4 mm thick. Also a big problem I realized is I did the math wrong for the first board when centering the squares. I made the edges of the board the same size as the lines between the squares, but the edges actually have to be half that length because each edge is only touching one playing square, not two. I have run into some issues trying to print this. I tried printing it twice and both times one of the squares in the first layer gets messed up. I think this is because the circle cutouts made the surface too thin.
+
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/b0a55e0f-de33-4198-9cad-7089030c5c0d" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/3182ad2c-2892-4d63-bb7c-1e2d1dc3a838" />
+
+## 4/9/26
+I was able to print the new chessboard, and it works a lot better. I figured out that the problem was just the first layer printing too fast, so I lowered the print speed of the first layer and that fixed it. The circle pattern looks really nice, and it has the added benefit of showing the players where the chess piece should be placed with a circle. This is nice because it shows that you need to place the chess in the center of the square because the reed switch might not trigger if it is placed at the edge.
+
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/4664866b-c688-4c74-8424-dcd793174a39" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/ec50feae-6ec4-4b56-ad0b-998542c7f672" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/16dc37be-b4e4-4c8c-9d29-a9d413d9aa59" />
 
