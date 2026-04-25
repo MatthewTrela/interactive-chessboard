@@ -29,15 +29,13 @@ Today Tim and I got our breadboard demo working. For components we used the ESP3
 ## 3/11/26
 Spring break is next week and the machine shop deadline is this Friday, so this week I have been working on the housing for our chessboard. I made a mock up design of the housing yesterday. I want to keep it simple so the plan is a wooden box 10.6" x 14.6". It needs to be large enough to fit two sensor boards width wise and then length wise it needs to fit two sensor boards and the microcontroller board. The most important part is very precise holes drilled into the bottom of the housing to hold our sensor PCB boards. This is because for proper spacing to have a reed switch in the exact center of each chess square, the sensor PCB boards need to be exactly 6.67 mm apart edge to edge. For the top of the box the plan is to have holes drilled out for the OLED displays and rotary encoders. The actual chess playing surface will sit on top of an inlay milled into the sizes of the top part so it sits flush with the surface. I went to the workshop today, and Greg helped me make a CAD diagram of the exact specifications I wanted. He told me that the machine shop will have it built by the time we come back from break. The only thing I am still iffy about is the spacing I chose for the height. I decided to have the sensor boards 1 inch from the bottom of the box which should be okay, but I also decided on a distance of 12mm from the surface of the PCB boards to the bottom of the 3D printed chessboard. It is hard to know if this spacing will work for triggering the reed switches, so I will have to see when everything is constructed. We can always lower or raise the standoffs later.
 
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/8ae8f913-fd2b-491c-b993-62b51bc2490b" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/80213c37-0a81-43db-a23d-b027e7f47bfb" />
+<img width="909" height="327" alt="Image" src="https://github.com/user-attachments/assets/ec8c707c-018b-4c05-b312-34b72debcd6c" />
+
 ## 3/23/26
 We are now back from spring break, and the next thing I'm working on is the 3D print for the chessboard playing surface. Geometry wise it is not a very complicated shape to model, but there are a couple considerations I need to make for functionality. First, to trap the light and make sure LEDs don't bleed through to adjacent squares, I need to add a grid of black walls underneath each square to trap and direct light. I still don't know how I want to mount the LED strips for the chess squares. I want to try mounting the LED strips sideways under the chessboard because I think this way they would take up the least amount of space. This means I need to add some small tunnels for mounting the strips to the grid. Lastly, I need a way to differentiate black and white squares without making some squares all black. The light will not bleed through straight black PCA so I need a solution here. The thing I came up with is adding some black diagonal lines to the black squares, so you can tell they are black squares while still leaving most of the background white. 
 
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/5f6612af-fe8b-4737-92b5-8d824898908e" />
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/e645f6a3-cc9b-449f-a2d4-f3e402d770e4" />
-
-
-
-<img width="500" alt="Image" src="https://github.com/user-attachments/assets/8ae8f913-fd2b-491c-b993-62b51bc2490b" />
-<img width="500" alt="Image" src="https://github.com/user-attachments/assets/80213c37-0a81-43db-a23d-b027e7f47bfb" />
-<img width="909" height="327" alt="Image" src="https://github.com/user-attachments/assets/ec8c707c-018b-4c05-b312-34b72debcd6c" />
 
