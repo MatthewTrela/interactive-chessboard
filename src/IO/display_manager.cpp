@@ -127,13 +127,10 @@ void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bo
         }
 
     } else if (s.screen == Screen::OptionsMenu) {
-        constexpr uint8_t ITEMS = 3;
+        constexpr uint8_t ITEMS = 4;
 
         if (leftSpin) {
-            if (s.optionsIndex == 0) {
-                s.screen = Screen::PlayingMenu;
-                s.needsRedraw = true;
-            } else {
+            if (s.optionsIndex > 0) {
                 s.optionsIndex--;
                 s.needsRedraw = true;
             }
@@ -143,13 +140,15 @@ void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bo
                 s.needsRedraw = true;
             }
         } else if (buttonPressed) {
-            if (s.optionsIndex == 0) {  // legal moves option
+            if (s.optionsIndex == 0) {         // Return back to playing screen
+                s.screen = Screen::PlayingMenu;
+            } else if (s.optionsIndex == 1) {  // legal moves option
                 s.legalMoves = !s.legalMoves;
                 game.setSettings(playerID - 1, s.bestMoves, s.legalMoves);
-            } else if (s.optionsIndex == 1) {  // best moves option
+            } else if (s.optionsIndex == 2) {  // best moves option
                 s.bestMoves = !s.bestMoves;
                 game.setSettings(playerID - 1, s.bestMoves, s.legalMoves);
-            } else if (s.optionsIndex == 2) {  // reset button
+            } else if (s.optionsIndex == 3) {  // reset button
                 resetState(1);
                 resetState(2);
                 game.reset();
@@ -416,9 +415,10 @@ void DisplayManager::drawOptionsMenu(int playerID, OptionsHighlight highlight) {
         OptionsHighlight val;
         bool state;
     } items[] = {
-        {"Legal Moves", 30, OptionsHighlight::LegalMoves, s.legalMoves},
-        {"Best Moves",  42, OptionsHighlight::BestMoves,  s.bestMoves},
-        {"Reset",       54, OptionsHighlight::Reset,      false},
+        {"Back", 25, OptionsHighlight::Back, false},
+        {"Legal Moves", 35, OptionsHighlight::LegalMoves, s.legalMoves},
+        {"Best Moves", 45, OptionsHighlight::BestMoves, s.bestMoves},
+        {"Reset", 55, OptionsHighlight::Reset, false},
     };
 
     for (auto& item : items) {
@@ -436,7 +436,7 @@ void DisplayManager::drawOptionsMenu(int playerID, OptionsHighlight highlight) {
         }
         display->print(item.label);
 
-        if (item.val != OptionsHighlight::Reset) {
+        if (item.val != OptionsHighlight::Reset && item.val != OptionsHighlight::Back) {
             drawToggle(display, 100, item.y - 1, item.state);
         }
     }
@@ -506,7 +506,7 @@ void DisplayManager::drawToggle(Adafruit_SSD1306* d, uint8_t x, uint8_t y, bool 
     } else {
         d->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
         d->setCursor(x + 14, y + 1);
-        d->print("OFF");
+        d->print("OF");
     }
 }
 
@@ -533,10 +533,12 @@ PlayingHighlight DisplayManager::playHL(uint8_t i) {
 OptionsHighlight DisplayManager::optHL(uint8_t i) {
     switch (i) {
         case 0:
-            return OptionsHighlight::LegalMoves;
+            return OptionsHighlight::Back;
         case 1:
-            return OptionsHighlight::BestMoves;
+            return OptionsHighlight::LegalMoves;
         case 2:
+            return OptionsHighlight::BestMoves;
+        case 3:
             return OptionsHighlight::Reset;
         default:
             return OptionsHighlight::None;

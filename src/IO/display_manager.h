@@ -9,7 +9,7 @@
 enum class MenuHighlight {None};
 enum class Screen {MainMenu, PlayingMenu, OptionsMenu, GameOver};
 enum class PlayingHighlight { None, Settings, Undo, Square};
-enum class OptionsHighlight{ None, LegalMoves, BestMoves, Reset};
+enum class OptionsHighlight{ None, Back, LegalMoves, BestMoves, Reset};
 
 struct PlayerUIState {
     Screen  screen = Screen::MainMenu;

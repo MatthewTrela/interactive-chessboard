@@ -47,7 +47,7 @@ class Encoder;
 // Debounce delays
 #define MCP_DEBOUNCE_DELAY_MS 15
 #define DEBOUNCE_MS 50
-#define BUTTON_DEBOUNCE_MS 150
+#define BUTTON_DEBOUNCE_MS 200
 
 // OLED
 #define OLED_ADDRESS 0x3C
