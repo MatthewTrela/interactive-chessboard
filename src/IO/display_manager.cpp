@@ -196,13 +196,13 @@ void DisplayManager::resetState(int playerID) {
 
     uiState[playerID - 1] = PlayerUIState{};
     uiState[playerID - 1].totalSeconds = savedTime;
+    uiState[playerID - 1].remainingMs = savedTime*1000;
     uiState[playerID - 1].legalMoves = savedLegal;
     uiState[playerID - 1].bestMoves = savedBest;
+
     int m = savedTime / 60;
     int s = savedTime % 60;
     snprintf(uiState[playerID - 1].timeStr, sizeof(uiState[playerID - 1].timeStr), "%02d:%02d", m, s);
-    uiState[playerID - 1].timeLocked = false;
-
     uiState[playerID - 1].needsRedraw = true;
 }
 
@@ -217,15 +217,23 @@ void DisplayManager::notifyGameEnd(const char* reason) {
 }
 
 void DisplayManager::updateTime(int playerID) {
-    if (uiState[0].screen == Screen::GameOver) return;
+    if (uiState[0].screen == Screen::GameOver) {
+        return;
+    }
 
     PlayerUIState& s = uiState[playerID - 1];
-    if (s.startTime == 0) s.startTime = millis();
+    if (!s.clockRunning) {
+        return;
+    }
 
-    unsigned long timeChange = millis() - s.startTime;
-    int timeLeftSecs = s.totalSeconds - (int)(timeChange / 1000);
+    unsigned long now = millis();
+    unsigned long elapsed = now - s.lastTickMs;
+    s.lastTickMs = now;
 
-    if (timeLeftSecs <= 0) {
+    s.remainingMs -= (int)elapsed;
+
+    if (s.remainingMs <= 0) {
+        s.remainingMs = 0;
         clearAllLEDs();
         flushLEDBuffer();
         game.setState(SystemState::GAME_OVER);
@@ -234,12 +242,10 @@ void DisplayManager::updateTime(int playerID) {
         return;
     }
 
-    // Generate time string for OLED
-    if (timeLeftSecs != s.lastSeconds) {
-        s.lastSeconds = timeLeftSecs;
-        int minutes = timeLeftSecs / 60;
-        int seconds = timeLeftSecs % 60;
-        snprintf(s.timeStr, sizeof(s.timeStr), "%02d:%02d", minutes, seconds);
+    int secsLeft = s.remainingMs / 1000;
+    if (secsLeft != s.lastDisplayedSeconds) {
+        s.lastDisplayedSeconds = secsLeft;
+        snprintf(s.timeStr, sizeof(s.timeStr), "%02d:%02d", secsLeft / 60, secsLeft % 60);
         s.needsRedraw = true;
     }
 }
@@ -247,8 +253,12 @@ void DisplayManager::updateTime(int playerID) {
 void DisplayManager::setTimeControl(int seconds) {
     for (int i = 0; i < 2; i++) {
         uiState[i].totalSeconds = seconds;
-        int m = seconds / 60;
-        int s = seconds % 60;
+        uiState[i].remainingMs = seconds*1000;
+        uiState[i].clockRunning = false;
+        uiState[i].lastTickMs = 0;
+        uiState[i].lastDisplayedSeconds = -1;
+        int m = seconds/60;
+        int s = seconds%60;
         snprintf(uiState[i].timeStr, sizeof(uiState[i].timeStr), "%02d:%02d", m, s);
         uiState[i].needsRedraw = true;
     }
@@ -256,7 +266,18 @@ void DisplayManager::setTimeControl(int seconds) {
 
 void DisplayManager::startClock(int playerID) {
     PlayerUIState& s = uiState[playerID - 1];
-    s.startTime = millis();
+    s.clockRunning = true;
+    s.lastTickMs = millis();
+}
+
+void DisplayManager::pauseClock(int playerID) {
+    uiState[playerID - 1].clockRunning = false;
+}
+
+void DisplayManager::resumeClock(int playerID) {
+    PlayerUIState& s = uiState[playerID - 1];
+    s.clockRunning = true;
+    s.lastTickMs = millis();
 }
 
 void DisplayManager::drawGrid(int playerID, uint64_t boardState) {

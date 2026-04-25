@@ -56,8 +56,51 @@ void UITask(void* pvParameters) {
         uiManager->drawMainMenu(p + 1, MenuHighlight::None);
     }
 
+    SystemState prevState = game.getState();
+    Chess::ChessColor prevSide = Chess::ChessColor::White;
+    bool blackClockStarted = false;
+
     for (;;) {
         uint32_t notificationValue = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
+
+        SystemState currentState = game.getState();
+        Chess::ChessColor currentSide = game.getBoard().getSideToMove();
+
+        if (currentState != prevState) {
+            if (currentState == SystemState::PLAYING) {
+                if (prevState == SystemState::ERROR_RECOVERY) {
+                    if (currentSide == Chess::ChessColor::White) {
+                        uiManager->resumeClock(1);
+                    } else {
+                        uiManager->resumeClock(2);
+                    }
+                } else {
+                    blackClockStarted = false;
+                    prevSide = Chess::ChessColor::White;
+                    uiManager->startClock(1);
+                }
+            } else if (currentState == SystemState::ERROR_RECOVERY) {
+                uiManager->pauseClock(1);
+                uiManager->pauseClock(2);
+            }
+            prevState = currentState;
+        }
+
+        if (currentState == SystemState::PLAYING && currentSide != prevSide) {
+            if (currentSide == Chess::ChessColor::Black) {
+                uiManager->pauseClock(1);
+                if (!blackClockStarted) {
+                    uiManager->startClock(2);
+                    blackClockStarted = true;
+                } else {
+                    uiManager->resumeClock(2);
+                }
+            } else {
+                uiManager->pauseClock(2);
+                uiManager->resumeClock(1);
+            }
+        }
+        prevSide = currentSide;
 
         if (notificationValue > 0) {
             for (uint8_t p = 0; p < 2; p++) {
@@ -65,14 +108,15 @@ void UITask(void* pvParameters) {
                 uiManager->handleInput(p + 1, d.leftSpin, d.rightSpin, d.buttonPressed);
             }
         } else {
-            if (game.getState() == SystemState::PLAYING) {
-                if (game.getBoard().getSideToMove() == Chess::ChessColor::White) {
+            if (currentState == SystemState::PLAYING) {
+                if (currentSide == Chess::ChessColor::White) {
                     uiManager->updateTime(1);
                 } else {
                     uiManager->updateTime(2);
                 }
             }
         }
+
         uiManager->updateDisplays();
     }
 }
