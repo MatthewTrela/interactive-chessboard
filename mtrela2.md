@@ -44,3 +44,13 @@ Today I printed the model of the chess playing surface. I was worried about how 
 
  <img width="500" alt="Image" src="https://github.com/user-attachments/assets/deeb529c-2552-448a-b76a-473d713d3a74" />
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/78a57f06-426e-4240-93c0-6735579c7ffc" />
+
+## 3/30/26
+Most of the last week I have been working on getting the LED strips to fit the size of our chessboard. Something I noticed after 3D printing our chessboard is that the spacing of the LEDs on the LED strip we got is too big. The LEDs are 33mm apart, but our chess squares are 26.67 mm apart. I did some handwavey math before we got the LED strips that it would work out, but actually matching up the LED strip with our 3D print shows that it doesn't line up, and some squares don't even have an LED. There is not really an elegant solution to this problem. The thing I came up with is cutting the LED strip into pairs of 2 LEDs, trimming a little bit of the strip away on the junction between two pieces, using an exacto knife to strip away the black coating on the LED to expose the data, ground, and vcc copper, and then manually soldering the strips back together. It is not ideal, but it does work to resize the strips. Each strip takes me 20-40 minutes and I have to do 8 of them, but right now I am mostly done.  
+
+<img width="1000" alt="Image" src="https://github.com/user-attachments/assets/694faab9-6348-4bc9-957b-f8cec1d7b944" />
+
+## 3/31/26
+I finally finished soldering the LED strips. I did a test run of every LED strip connected together to make sure all the soldered connections are solid, and all 64 LEDs lit up which is a good sign. However, my soldering is still not done. The next thing I have to figure out is how I will connect the LED strips so that they form a grid instead of a straight line. We have plastic connectors that clamp down on two ends to connect them together. I found that if I take two of those I can connect them at a 180 degree angle with wires that I manually solder onto the connectors. I made one and it is what I use in the image below to turn the LED strip chain. Now I just need to make 6 more of them. 
+
+<img width="700" alt="Image" src="https://github.com/user-attachments/assets/97067145-38f9-45be-967f-9423e93568a5" />
