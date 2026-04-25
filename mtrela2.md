@@ -109,4 +109,9 @@ JJ finished soldering our main PCB board today, but Tim and I have had difficult
 
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/b1d22d06-4159-4145-8a04-a5ac578fc6ba" />
 
+## 4/22/26
+Our mock demo is on Friday in two days so Tim and I have been trying to get the software side of things working. Tim has been working on tracking game state, lighting up legal moves, and error correction, while I have been working on handling encoder inputs, menu navigation, selecting options, and an automatic clock for the game. The encoder has been giving me a lot of trouble. I think the ones we got are super bouncy and imprecise because one rotation left or right gives you a variable amount of steps. To prevent erroneous left and right inputs I only count rotations that cause 4 steps, which should be every rotation, but it isn't. This means sometimes to move left or right you have to rotate the encoder multiple times, which is unfortunate, but it does allow a left turn to always be a left turn and a right turn to always be a right turn. Also the button is very bouncy and I had to add a very long debounce time to get one button trigger per press. Even with that debounce time sometimes it triggers twice. Tim has legal moves working although we have no error correction yet. We are saving best moves for last, because that should be a pretty simple matter of adding the engine.
+
+<img width="250" alt="Image" src="https://github.com/user-attachments/assets/e499d0a8-4f66-4aaa-843c-3d3b89aad9bb" />
+<img width="250" alt="Image" src="https://github.com/user-attachments/assets/233c0d1c-ac45-41b1-b3ef-1217a82dd9f7" />
 
