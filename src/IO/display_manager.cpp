@@ -225,6 +225,7 @@ void DisplayManager::resetState(int playerID) {
     uiState[playerID - 1].remainingMs = savedTime * 1000;
     uiState[playerID - 1].legalMoves = savedLegal;
     uiState[playerID - 1].bestMoves = savedBest;
+    errorMsgActive = false;
 
     int m = savedTime / 60;
     int s = savedTime % 60;
