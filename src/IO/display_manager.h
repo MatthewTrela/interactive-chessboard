@@ -9,7 +9,7 @@
 
 enum class MenuHighlight { None };
 enum class Screen { MainMenu, PlayingMenu, OptionsMenu, GameOver, Promotion };
-enum class PlayingHighlight { None, Settings, Undo, Square };
+enum class PlayingHighlight { None, Settings};
 enum class OptionsHighlight { None, Back, LegalMoves, BestMoves, Reset };
 enum class PromotionHighlight { Queen, Knight, Bishop, Rook };
 
@@ -84,6 +84,12 @@ class DisplayManager {
     // Transition to gameover screen with reason for loss
     void notifyGameEnd(const char* reason);
 
+    // Show error message to help user fix error state
+    void showErrorMsg(Chess::Square sq, Chess::PieceType pt);
+
+    // Clear error message
+    void clearErrorMsg();
+
     const PlayerUIState& getState(int playerID) const { return uiState[playerID - 1]; }
 
     void startPromotion(int playerID);
@@ -106,6 +112,11 @@ class DisplayManager {
     Chess::PieceType promotionResult = Chess::PieceType::Queen;
     int promotingPlayer = 0;
     bool promotionComplete;
+
+    // Private error message variables
+    bool errorMsgActive = false;
+    char errorMsgPiece[8]  = {};
+    char errorMsgSquare[3] = {};
 
     // Drawing symbol helpers
     static void drawGear(Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color);
