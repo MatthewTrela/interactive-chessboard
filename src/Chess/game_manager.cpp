@@ -36,6 +36,12 @@ void GameManager::init() {
 }
 
 // Public methods
+void GameManager::reset() {
+    currentBoard.reset();
+    currentState = SystemState::MAIN_MENU;
+    gameOverReason = GameOverReason::NONE;
+    resetMovePhase();
+}
 
 void GameManager::updateInitialization(uint64_t sensorState) {
     // Update sensor occupancy

@@ -53,6 +53,8 @@ class GameManager {
     // reset to starting position
     void init();
 
+    void reset();
+
     void updateInitialization(uint64_t sensorState);
 
     /// Called whenever a hall-effect / reed switch changes state.
