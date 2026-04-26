@@ -170,54 +170,33 @@ void GameManager::handleErrorRecovery() {
 
     Chess::Bitboard missing = expected & ~sensorOccupancy;
     Chess::Bitboard unexpected = sensorOccupancy & ~expected;
-    int missingCount = Chess::BitUtils::countBits(missing);
-    int unexpectedCount = Chess::BitUtils::countBits(unexpected);
-    int totalErrors = missingCount + unexpectedCount;
 
     clearAllLEDs();
 
-    if (totalErrors <= 2) {
-        // missing squares highlighted in the piece’s colour, unexpected squares highlighted in red
-        Chess::Bitboard tempMissing = missing;
-        while (tempMissing) {
-            Chess::Square sq = Chess::BitUtils::popLSB(tempMissing);
-            Chess::ChessColor color = currentBoard.colorAt(sq);
-            uint32_t ledColor = (color == Chess::ChessColor::White) ? WHITE_PIECES : BLACK_PIECES;
-            highlightSquare(sq / 8, sq % 8, ledColor);
-        }
+    // 1 highlight all error squares in red
+    Chess::Bitboard tempErrors = missing | unexpected;
+    while (tempErrors) {
+        Chess::Square sq = Chess::BitUtils::popLSB(tempErrors);
+        highlightSquare(sq / 8, sq % 8, ILLEGAL_PIECE_COLOR);
+    }
 
-        Chess::Bitboard tempUnexpected = unexpected;
-        while (tempUnexpected) {
-            Chess::Square sq = Chess::BitUtils::popLSB(tempUnexpected);
-            highlightSquare(sq / 8, sq % 8, ILLEGAL_PIECE_COLOR);
-        }
+    // b pick one missing square to fill
+    if (missing) {
+        Chess::Square guideSq = Chess::BitUtils::getLSB(missing);
+        Chess::ChessColor expectedColor = currentBoard.colorAt(guideSq);
+        uint32_t sideColor = (expectedColor == Chess::ChessColor::White) ? WHITE_PIECES : BLACK_PIECES;
+
+        // put correct color
+        highlightSquare(guideSq / 8, guideSq % 8, sideColor);
+
+        Chess::PieceType pt = currentBoard.pieceAt(guideSq);
+        // TODO: Display on OLED the piece that needs to be on `guideSq`.
+        //       e.g., "Place <{Pawn, Knight, Bishop, Rook, Queen, King}> on <square>"
+        Serial.printf("ERROR_RECOVERY >2: guide square %d needs piece %d\n", guideSq, static_cast<int>(pt));
     } else {
-        // 1 highlight all error squares in red
-        Chess::Bitboard allErrors = missing | unexpected;
-        Chess::Bitboard tempErrors = allErrors;
-        while (tempErrors) {
-            Chess::Square sq = Chess::BitUtils::popLSB(tempErrors);
-            highlightSquare(sq / 8, sq % 8, ILLEGAL_PIECE_COLOR);
-        }
-
-        // b pick one missing square to fill
-        if (missing) {
-            Chess::Square guideSq = Chess::BitUtils::getLSB(missing);
-            Chess::ChessColor expectedColor = currentBoard.colorAt(guideSq);
-            uint32_t sideColor = (expectedColor == Chess::ChessColor::White) ? WHITE_PIECES : BLACK_PIECES;
-
-            // put correct color
-            highlightSquare(guideSq / 8, guideSq % 8, sideColor);
-
-            Chess::PieceType pt = currentBoard.pieceAt(guideSq);
-            // TODO: Display on OLED the piece that needs to be on `guideSq`.
-            //       e.g., "Place <{Pawn, Knight, Bishop, Rook, Queen, King}> on <square>"
-            Serial.printf("ERROR_RECOVERY >2: guide square %d needs piece %d\n", guideSq, static_cast<int>(pt));
-        } else {
-            // Only unexpected pieces exist – all errors are extra pieces.
-            // TODO: Handle the case where no piece is missing but >2 extra pieces are present.
-            //       Could direct the user to remove pieces from the highlighted squares.
-        }
+        // Only unexpected pieces exist – all errors are extra pieces.
+        // TODO: Handle the case where no piece is missing but >2 extra pieces are present.
+        //       Could direct the user to remove pieces from the highlighted squares.
     }
 
     flushLEDBuffer(true);
