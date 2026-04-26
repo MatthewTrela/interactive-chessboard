@@ -35,15 +35,23 @@ enum class MovePhase {
     CASTLING_KING_PLACED,
 };
 
+enum class GameOverReason {
+    NONE,
+    CHECKMATE_WHITE,
+    CHECMATE_BLACK,
+    STALEMATE,
+    TIMEOUT_WHITE,
+    TIMEOUT_BLACK,
+    INSUFFICIENT_MATERIAL,
+    THREE_FOLD,
+};
+
 class GameManager {
    public:
     GameManager();
 
     // reset to starting position
     void init();
-
-    // Turn off all LEDs, reset board, and enter main menu state
-    void reset();
 
     void updateInitialization(uint64_t sensorState);
 
@@ -94,6 +102,8 @@ class GameManager {
     Chess::Square promotionTo;
     bool promotionIsCapture;
     Chess::PieceType promotionChoice;
+
+    GameOverReason gameOverReason;
 
     // internal helper methods
     /// Sets ERROR_RECOVERY state, clears move-phase, and immediately renders

@@ -31,15 +31,11 @@ void GameManager::init() {
     players[1] = PlayerSettings{true, true};
 
     currentState = SystemState::MAIN_MENU;
+    gameOverReason = GameOverReason::NONE;
     resetMovePhase();
 }
 
 // Public methods
-void GameManager::reset() {
-    currentBoard.reset();
-    currentState = SystemState::MAIN_MENU;
-    resetMovePhase();
-}
 
 void GameManager::updateInitialization(uint64_t sensorState) {
     // Update sensor occupancy
@@ -951,18 +947,27 @@ bool GameManager::resolveCastleFromRook(Chess::Square rookSq) {
 void GameManager::checkGameEndConditions() {
     if (currentBoard.isCheckmate()) {
         currentState = SystemState::GAME_OVER;
+        Chess::ChessColor side = currentBoard.getSideToMove();
+        bool isWhite = (side == Chess::ChessColor::White);
+        if (isWhite)
+            gameOverReason = GameOverReason::CHECKMATE_WHITE;
+        else
+            gameOverReason = GameOverReason::CHECMATE_BLACK;
         return;
     }
     if (currentBoard.isStalemate()) {
         currentState = SystemState::GAME_OVER;
+        gameOverReason = GameOverReason::STALEMATE;
         return;
     }
     if (currentBoard.isThreefoldRepetition()) {
         currentState = SystemState::GAME_OVER;
+        gameOverReason = GameOverReason::THREE_FOLD;
         return;
     }
     if (currentBoard.isInsufficientMaterial()) {
         currentState = SystemState::GAME_OVER;
+        gameOverReason = GameOverReason::INSUFFICIENT_MATERIAL;
         return;
     }
 
