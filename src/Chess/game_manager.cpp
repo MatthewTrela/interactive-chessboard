@@ -143,6 +143,7 @@ void GameManager::updateSensorOccupancy(Chess::Square sq, bool occupied) {
 
 void GameManager::enterErrorRecovery() {
     currentState = SystemState::ERROR_RECOVERY;
+    uiManager->clearErrorMsg();
 
     movePhase = MovePhase::IDLE;
     attackingSquare = Chess::SQ_NONE;
@@ -164,6 +165,7 @@ void GameManager::handleErrorRecovery() {
     if (sensorOccupancy == expected) {
         Serial.println("[ERROR_RECOVERY] Board matched expected state. Resuming PLAYING.");
         currentState = SystemState::PLAYING;
+        uiManager->clearErrorMsg();
         resetMovePhase();
         return;
     }
@@ -210,8 +212,7 @@ void GameManager::handleErrorRecovery() {
             highlightSquare(guideSq / 8, guideSq % 8, sideColor);
 
             Chess::PieceType pt = currentBoard.pieceAt(guideSq);
-            // TODO: Display on OLED the piece that needs to be on `guideSq`.
-            //       e.g., "Place <{Pawn, Knight, Bishop, Rook, Queen, King}> on <square>"
+            uiManager->showErrorMsg(guideSq, pt);
             Serial.printf("ERROR_RECOVERY >2: guide square %d needs piece %d\n", guideSq, static_cast<int>(pt));
         } else {
             // Only unexpected pieces exist – all errors are extra pieces.

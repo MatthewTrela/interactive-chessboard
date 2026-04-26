@@ -109,21 +109,12 @@ void DisplayManager::handleInput(int playerID, bool leftSpin, bool rightSpin, bo
             }
         }
     } else if (s.screen == Screen::PlayingMenu) {
-        constexpr uint8_t ITEMS = 3;
-
-        if (leftSpin && s.menuIndex > 0) {
-            s.menuIndex = s.menuIndex - 1;
-            s.needsRedraw = true;
-        } else if (rightSpin && s.menuIndex + 1 < ITEMS) {
-            s.menuIndex = s.menuIndex + 1;
-            s.needsRedraw = true;
-        } else if (buttonPressed) {
+         if (buttonPressed) {
             if (s.menuIndex == 0) {
                 s.screen = Screen::OptionsMenu;
                 s.optionsIndex = 0;
                 s.needsRedraw = true;
             }
-            // TODO: Undo (index 1), Square (index 2)
         }
 
     } else if (s.screen == Screen::OptionsMenu) {
@@ -432,34 +423,35 @@ void DisplayManager::drawPlayingMenu(int playerID, PlayingHighlight highlight) {
 
     const uint8_t CY = 50;
 
-    struct Item {
-        PlayingHighlight val;
-        uint8_t cx;
-    } items[] = {
-        {PlayingHighlight::Settings, 21},
-        {PlayingHighlight::Undo, 64},
-        {PlayingHighlight::Square, 107},
-    };
+   if (errorMsgActive) {
+        // bool gearSelected = (highlight == PlayingHighlight::Settings);
+        // if (gearSelected) {
+        //     display->fillRect(0, CY - 12, 28, 24, SSD1306_WHITE);
+        // }
+        // drawGear(display, 14, CY, gearSelected ? SSD1306_BLACK : SSD1306_WHITE);
 
-    for (auto& item : items) {
-        bool sel = (item.val == highlight);
-        uint16_t fg = sel ? SSD1306_BLACK : SSD1306_WHITE;
+        drawGear(display, 14, CY, SSD1306_WHITE);
+        display->drawLine(30, 30, 30, 63, SSD1306_WHITE);
 
-        if (sel) {
-            display->fillRect(item.cx - 14, CY - 12, 28, 24, SSD1306_WHITE);
-        }
 
-        if (item.val == PlayingHighlight::Settings) {
-            drawGear(display, item.cx, CY, fg);
+        String line1 = String("Place ") + errorMsgPiece;
+        String line2 = String("on ") + errorMsgSquare;
+        int16_t x1 = 31 + (97 - (line1.length() * 6)) / 2;
+        int16_t x2 = 31 + (97 - (line2.length() * 6)) / 2;
 
-        } else if (item.val == PlayingHighlight::Undo) {
-            display->setTextColor(fg, sel ? SSD1306_WHITE : SSD1306_BLACK);
-            display->setCursor(item.cx - 12, CY - 4);
-            display->print("UNDO");
+        display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+        display->setCursor(x1, 35); 
+        display->print(line1);
+        display->setCursor(x2, 49); 
+        display->print(line2);
+    } else {
+        // bool gearSelected = (highlight == PlayingHighlight::Settings);
+        // if (gearSelected) {
+        //     display->fillRect(64 - 14, CY - 12, 28, 24, SSD1306_WHITE);
+        // }
+        // drawGear(display, 64, CY, gearSelected ? SSD1306_BLACK : SSD1306_WHITE);
 
-        } else if (item.val == PlayingHighlight::Square) {
-            drawSquareIcon(display, item.cx, CY, fg);
-        }
+        drawGear(display, 64, CY, SSD1306_WHITE);
     }
 
     display->display();
@@ -591,6 +583,23 @@ void DisplayManager::drawPromotionMenu(int playerID, PromotionHighlight highligh
     display->display();
 }
 
+void DisplayManager::showErrorMsg(Chess::Square sq, Chess::PieceType pt) {
+    strncpy(errorMsgPiece, pieceTypeName(pt), sizeof(errorMsgPiece) - 1);
+    errorMsgSquare[0] = 'A' + (sq % 8);
+    errorMsgSquare[1] = '1' + (sq / 8);
+    errorMsgSquare[2] = '\0';
+
+    errorMsgActive = true;
+    uiState[0].needsRedraw = true;
+    uiState[1].needsRedraw = true;
+}
+
+void DisplayManager::clearErrorMsg() {
+    errorMsgActive = false;
+    uiState[0].needsRedraw = true;
+    uiState[1].needsRedraw = true;
+}
+
 void DisplayManager::drawGear(Adafruit_SSD1306* d, uint8_t cx, uint8_t cy, uint16_t color) {
     d->drawCircle(cx, cy, 7, color);
     d->fillCircle(cx, cy, 4, color);
@@ -638,10 +647,6 @@ PlayingHighlight DisplayManager::playHL(uint8_t i) {
     switch (i) {
         case 0:
             return PlayingHighlight::Settings;
-        case 1:
-            return PlayingHighlight::Undo;
-        case 2:
-            return PlayingHighlight::Square;
         default:
             return PlayingHighlight::None;
     }
