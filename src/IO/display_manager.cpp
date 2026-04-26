@@ -434,9 +434,15 @@ void DisplayManager::drawPlayingMenu(int playerID, PlayingHighlight highlight) {
         drawGear(display, 14, CY, SSD1306_WHITE);
         display->drawLine(30, 30, 30, 63, SSD1306_WHITE);
 
+        String line1, line2;
+        if (strcmp(errorMsgPiece, "Extra") != 0) {
+            line1 = String("Place ") + errorMsgPiece;
+            line2 = String("on ") + errorMsgSquare;
+        } else {
+            line1 = "Remove Extra";
+            line2 = "Pieces";
+        }
 
-        String line1 = String("Place ") + errorMsgPiece;
-        String line2 = String("on ") + errorMsgSquare;
         int16_t x1 = 31 + (97 - (line1.length() * 6)) / 2;
         int16_t x2 = 31 + (97 - (line2.length() * 6)) / 2;
 
@@ -445,6 +451,7 @@ void DisplayManager::drawPlayingMenu(int playerID, PlayingHighlight highlight) {
         display->print(line1);
         display->setCursor(x2, 49); 
         display->print(line2);
+        
     } else {
         // bool gearSelected = (highlight == PlayingHighlight::Settings);
         // if (gearSelected) {
@@ -585,10 +592,14 @@ void DisplayManager::drawPromotionMenu(int playerID, PromotionHighlight highligh
 }
 
 void DisplayManager::showErrorMsg(Chess::Square sq, Chess::PieceType pt) {
-    strncpy(errorMsgPiece, pieceTypeName(pt), sizeof(errorMsgPiece) - 1);
-    errorMsgSquare[0] = 'A' + (sq % 8);
-    errorMsgSquare[1] = '1' + (sq / 8);
-    errorMsgSquare[2] = '\0';
+    if (sq == Chess::Square::SQ_NONE && pt == Chess::PieceType::None) {
+        strncpy(errorMsgPiece, "Extra", sizeof(errorMsgPiece) - 1);
+    } else {
+        strncpy(errorMsgPiece, pieceTypeName(pt), sizeof(errorMsgPiece) - 1);
+        errorMsgSquare[0] = 'A' + (sq % 8);
+        errorMsgSquare[1] = '1' + (sq / 8);
+        errorMsgSquare[2] = '\0';
+    }
 
     errorMsgActive = true;
     uiState[0].needsRedraw = true;
