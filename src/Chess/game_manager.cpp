@@ -182,7 +182,7 @@ void GameManager::handleErrorRecovery() {
         highlightSquare(sq / 8, sq % 8, ILLEGAL_PIECE_COLOR);
     }
 
-    // b pick one missing square to fill
+    // 2 pick one missing square to fill
     if (missing) {
         Chess::Square guideSq = Chess::BitUtils::getLSB(missing);
         Chess::ChessColor expectedColor = currentBoard.colorAt(guideSq);
@@ -196,9 +196,7 @@ void GameManager::handleErrorRecovery() {
         //       e.g., "Place <{Pawn, Knight, Bishop, Rook, Queen, King}> on <square>"
         Serial.printf("ERROR_RECOVERY >2: guide square %d needs piece %d\n", guideSq, static_cast<int>(pt));
     } else {
-        // Only unexpected pieces exist – all errors are extra pieces.
-        // TODO: Handle the case where no piece is missing but >2 extra pieces are present.
-        //       Could direct the user to remove pieces from the highlighted squares.
+        uiManager->showErrorMsg(Chess::Square::SQ_NONE, Chess::PieceType::None);
     }
 
     flushLEDBuffer(true);
