@@ -26,6 +26,7 @@ void gameLoopTask(void* pvParameters) {
         ulTaskNotifyTake(pdTRUE, waitTime);
 
         uint64_t newOccupancy = readBoardBitmap();
+        String reason;
 
         switch (game.getState()) {
             case SystemState::INIT:
@@ -48,8 +49,27 @@ void gameLoopTask(void* pvParameters) {
                 game.updateBoard(newOccupancy);
                 break;
             case SystemState::GAME_OVER:
-                // TODO: show game over
-                uiManager->notifyGameEnd("reason");
+                switch (game.getGameOverReason()) {
+                    case GameOverReason::CHECKMATE_WHITE:
+                        reason = "Checkmate by White";
+                        break;
+                    case GameOverReason::CHECKMATE_BLACK:
+                        reason = "Checkmate by Black";
+                        break;
+                    case GameOverReason::STALEMATE:
+                        reason = "Stalemate";
+                        break;
+                    case GameOverReason::INSUFFICIENT_MATERIAL:
+                        reason = "Insufficient Material";
+                        break;
+                    case GameOverReason::THREE_FOLD:
+                        reason = "Three Fold Repetition";
+                        break;
+                    default:
+                        reason = "None";
+                }
+
+                uiManager->notifyGameEnd(reason.c_str());
                 break;
             default:
                 break;

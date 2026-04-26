@@ -38,10 +38,8 @@ enum class MovePhase {
 enum class GameOverReason {
     NONE,
     CHECKMATE_WHITE,
-    CHECMATE_BLACK,
+    CHECKMATE_BLACK,
     STALEMATE,
-    TIMEOUT_WHITE,
-    TIMEOUT_BLACK,
     INSUFFICIENT_MATERIAL,
     THREE_FOLD,
 };
@@ -69,6 +67,8 @@ class GameManager {
     Chess::Board& getBoard();
     SystemState getState();
     void setState(SystemState state) { currentState = state; }
+    GameOverReason getGameOverReason() const { return gameOverReason; }
+
     bool isDebouncing() const { return debounceStartTime != 0; }
     Chess::PieceType getPromotionChoice() const { return promotionChoice; }
     void setPromotionChoice(Chess::PieceType pt) { promotionChoice = pt; }
