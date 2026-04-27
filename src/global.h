@@ -74,6 +74,8 @@ class Encoder;
 #define WHITE_PIECES 0xFFFFFF         // white
 #define BLACK_PIECES 0x4d0099         // dark purple
 #define ILLEGAL_PIECE_COLOR 0xff0000  // red
+#define BEST_MOVE_FROM_COLOR 0x99E6FF  // light aqua
+#define BEST_MOVE_TO_COLOR 0x00FFFF    // Aqua
 
 // ========== GLOBAL OBJECTS (Declared as extern) ==========
 extern DisplayManager* uiManager;

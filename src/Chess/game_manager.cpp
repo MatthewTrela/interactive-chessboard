@@ -958,7 +958,7 @@ void GameManager::checkGameEndConditions() {
         if (isWhite)
             gameOverReason = GameOverReason::CHECKMATE_WHITE;
         else
-            gameOverReason = GameOverReason::CHECMATE_BLACK;
+            gameOverReason = GameOverReason::CHECKMATE_BLACK;
         return;
     }
     if (currentBoard.isStalemate()) {

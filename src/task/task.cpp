@@ -4,54 +4,161 @@
 #include "IO/display_manager.h"
 #include "IO/encoder.h"
 #include "IO/io_expander.h"
+#include "IO/led.h"
+#include "engine.h"
+#include "esp_task_wdt.h"
 #include "global.h"
 
 TaskHandle_t GameLoopTaskHandle = NULL;
 TaskHandle_t UITaskHandle = NULL;
 TaskHandle_t EngineTaskHandle = NULL;
 
+struct BestMoveHint {
+    Chess::Square    fromSq;
+    Chess::Square    toSq;
+    Chess::ChessColor side;
+    bool             valid;
+};
+
+static QueueHandle_t bestMoveQueue = NULL;
+
+static bool    hintVisible = false;
+static uint8_t hintFrom    = 0xFF;
+static uint8_t hintTo      = 0xFF;
+
+static void showHint(const BestMoveHint& hint) {
+    if (!game.getSettings((hint.side == Chess::ChessColor::White) ? 0 : 1).showBestMove) {
+        hintVisible = false;
+        hintFrom = 0xFF;
+        hintTo = 0xFF;
+        return;
+    }
+
+    if (hint.valid) {
+        uint8_t fromRow = hint.fromSq / 8;
+        uint8_t fromCol = hint.fromSq % 8;
+        uint8_t toRow   = hint.toSq   / 8;
+        uint8_t toCol   = hint.toSq   % 8;
+
+        highlightSquare(fromRow, fromCol, BEST_MOVE_FROM_COLOR);
+        highlightSquare(toRow,   toCol,   BEST_MOVE_TO_COLOR);
+        flushLEDBuffer(true);
+
+        hintFrom    = hint.fromSq;
+        hintTo      = hint.toSq;
+        hintVisible = true;
+    } else {
+        hintFrom    = 0xFF;
+        hintTo      = 0xFF;
+        hintVisible = false;
+    }
+}
+
+static void clearHint() {
+    if (!hintVisible) return;
+    BestMoveHint none{ Chess::SQ_NONE, Chess::SQ_NONE, Chess::ChessColor::White, false };
+    showHint(none);
+}
+
+void requestEngineHint(Chess::ChessColor side) {
+    if (EngineTaskHandle == NULL) {
+        return;
+    }
+
+    uint32_t val = (side == Chess::ChessColor::White) ? 1u : 2u;
+
+    xTaskNotify(EngineTaskHandle, val, eSetValueWithOverwrite);
+}
+
+// Cancel any in-progress or pending hint
+void cancelEngineHint() {
+    if (EngineTaskHandle == NULL) return;
+
+    ChessEngine::abortSearch();
+
+    if (bestMoveQueue != NULL) {
+        BestMoveHint stale;
+        xQueueReceive(bestMoveQueue, &stale, 0);
+    }
+
+    xTaskNotify(EngineTaskHandle, 0u, eSetValueWithOverwrite);
+    hintVisible = false;
+    hintFrom = 0xFF;
+    hintTo = 0xFF;
+}
+
 void gameLoopTask(void* pvParameters) {
+    Chess::ChessColor prevSideToMove = Chess::ChessColor::None;
+    SystemState prevState = SystemState::INIT;
+    MovePhase prevPhase = MovePhase::IDLE;
+
     for (;;) {
-        SystemState state = game.getState();
-        TickType_t waitTime;
+        SystemState state    = game.getState();
+        TickType_t  waitTime;
 
         if (state == SystemState::GAME_OVER) {
             waitTime = pdMS_TO_TICKS(200);
         } else if (game.isDebouncing()) {
             waitTime = pdMS_TO_TICKS(DEBOUNCE_MS);
         } else {
-            waitTime = portMAX_DELAY;
+            waitTime = 100;
         }
 
         ulTaskNotifyTake(pdTRUE, waitTime);
 
+        BestMoveHint hint;
+        if (bestMoveQueue != NULL && xQueueReceive(bestMoveQueue, &hint, 0) == pdTRUE) {
+            Chess::ChessColor currentSide = game.getBoard().getSideToMove();
+            if (hint.valid && hint.side == currentSide && game.getState() == SystemState::PLAYING && game.getMovePhase() == MovePhase::IDLE) {
+                if (game.getSettings((currentSide == Chess::ChessColor::White) ? 0 : 1).showBestMove) {
+                    showHint(hint);
+                }
+            }
+        }
+
         uint64_t newOccupancy = readBoardBitmap();
         String reason;
 
-        switch (game.getState()) {
+        switch (state) {
             case SystemState::INIT:
                 game.updateInitialization(newOccupancy);
                 break;
-            case SystemState::MAIN_MENU:
 
+            case SystemState::MAIN_MENU:
                 break;
-            case SystemState::PLAYING:
+
+            case SystemState::PLAYING: {
+                Chess::ChessColor currentSide = game.getBoard().getSideToMove();
+                MovePhase currentPhase = game.getMovePhase();
+
+                if (prevState != SystemState::PLAYING || currentSide != prevSideToMove) {
+                    requestEngineHint(currentSide);
+                    prevSideToMove = currentSide;
+                }
+
+                if (currentPhase != MovePhase::IDLE && prevPhase == MovePhase::IDLE) {
+                    cancelEngineHint();
+                }
+
                 game.updateBoard(newOccupancy);
+                prevPhase = currentPhase;
                 break;
+            }
+
             case SystemState::PROMOTION_SELECTION:
-                // The UI task will set promotionChoice and notify us.
                 if (game.getPromotionChoice() != Chess::PieceType::None) {
                     game.finalizePromotion();
                 }
                 break;
+
             case SystemState::ERROR_RECOVERY:
-                // TODO: show error on OLED
                 game.updateBoard(newOccupancy);
                 break;
+
             case SystemState::GAME_OVER:
                 switch (game.getGameOverReason()) {
                     case GameOverReason::CHECKMATE_WHITE:
-                        reason = "Checkmate by White";
+                        reason = "Checkmate by White";    
                         break;
                     case GameOverReason::CHECKMATE_BLACK:
                         reason = "Checkmate by Black";
@@ -60,20 +167,22 @@ void gameLoopTask(void* pvParameters) {
                         reason = "Stalemate";
                         break;
                     case GameOverReason::INSUFFICIENT_MATERIAL:
-                        reason = "Insufficient Material";
+                        reason = "Insufficient Material"; 
                         break;
                     case GameOverReason::THREE_FOLD:
-                        reason = "Three Fold Repetition";
+                        reason = "Three Fold Repetition"; 
                         break;
                     default:
                         reason = "None";
                 }
-
                 uiManager->notifyGameEnd(reason.c_str());
                 break;
+
             default:
                 break;
         }
+
+        prevState = state;
     }
 }
 
@@ -93,7 +202,6 @@ void UITask(void* pvParameters) {
         Chess::ChessColor currentSide = game.getBoard().getSideToMove();
 
         if (currentState == SystemState::PROMOTION_SELECTION) {
-            // Set up the promotion screen once (if not already showing)
             if (uiManager->getState(1).screen != Screen::Promotion &&
                 uiManager->getState(2).screen != Screen::Promotion) {
                 int player = (currentSide == Chess::ChessColor::White) ? 1 : 2;
@@ -104,11 +212,10 @@ void UITask(void* pvParameters) {
         if (currentState != prevState) {
             if (currentState == SystemState::PLAYING) {
                 if (prevState == SystemState::ERROR_RECOVERY) {
-                    if (currentSide == Chess::ChessColor::White) {
+                    if (currentSide == Chess::ChessColor::White)
                         uiManager->resumeClock(1);
-                    } else {
+                    else
                         uiManager->resumeClock(2);
-                    }
                 } else {
                     blackClockStarted = false;
                     prevSide = Chess::ChessColor::White;
@@ -149,11 +256,7 @@ void UITask(void* pvParameters) {
             }
         } else {
             if (currentState == SystemState::PLAYING) {
-                if (currentSide == Chess::ChessColor::White) {
-                    uiManager->updateTime(1);
-                } else {
-                    uiManager->updateTime(2);
-                }
+                uiManager->updateTime(currentSide == Chess::ChessColor::White ? 1 : 2);
             }
         }
 
@@ -161,16 +264,67 @@ void UITask(void* pvParameters) {
     }
 }
 
+static constexpr uint32_t ENGINE_SEARCH_MS = 4000;
+
 void EngineTask(void* pvParameters) {
+    esp_task_wdt_init(30, false);
+    esp_task_wdt_add(NULL);
+
+    ChessEngine::setTimeLimit(ENGINE_SEARCH_MS);
+
     for (;;) {
-        // TODO
-        // Run chess engine constantly on other core to see best moves
+        uint32_t val = 0;
+        xTaskNotifyWait(0, 0xFFFFFFFF, &val, portMAX_DELAY);
+        esp_task_wdt_reset();
+
+        if (val == 0) {
+            continue;
+        }
+
+        Chess::ChessColor side = (val == 1) ? Chess::ChessColor::White : Chess::ChessColor::Black;
+
+        Chess::Board searchBoard = game.getBoard();
+        Chess::Move bestMove = ChessEngine::searchBestMove(searchBoard);
+        esp_task_wdt_reset();
+
+        uint32_t pendingVal = 0;
+        if (xTaskNotifyWait(0, 0xFFFFFFFF, &pendingVal, 0) == pdTRUE) {
+            if (pendingVal == 0) {
+                continue;
+            } else {
+                xTaskNotify(EngineTaskHandle, pendingVal, eSetValueWithOverwrite);
+                continue;
+            }
+        }
+
+        BestMoveHint hint;
+        hint.side = side;
+
+        if (bestMove.getFrom() == bestMove.getTo()) {
+            hint.valid = false;
+            hint.fromSq = Chess::SQ_NONE;
+            hint.toSq = Chess::SQ_NONE;
+        } else {
+            hint.valid = true;
+            hint.fromSq = bestMove.getFrom();
+            hint.toSq = bestMove.getTo();
+        }
+
+        if (bestMoveQueue != NULL) {
+            xQueueOverwrite(bestMoveQueue, &hint);
+        }
+
+        if (GameLoopTaskHandle != NULL) {
+            xTaskNotifyGive(GameLoopTaskHandle);
+        }
     }
 }
 
 void initTasks() {
-    // TODO: Create tasks and assign priorities
-    // xTaskCreatePinnedToCore(EngineTask, "Engine", 8192, nullptr, 1, &EngineTaskHandle, 0);
+    bestMoveQueue = xQueueCreate(1, sizeof(BestMoveHint));
+    configASSERT(bestMoveQueue);
+
+    xTaskCreatePinnedToCore(EngineTask, "Engine", 65536, nullptr, 2, &EngineTaskHandle, 0);
     xTaskCreatePinnedToCore(gameLoopTask, "GameLoop", 4096, nullptr, 5, &GameLoopTaskHandle, 1);
     xTaskCreatePinnedToCore(UITask, "UI", 4096, nullptr, 3, &UITaskHandle, 1);
 }

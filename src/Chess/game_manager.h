@@ -68,6 +68,7 @@ class GameManager {
     SystemState getState();
     void setState(SystemState state) { currentState = state; }
     GameOverReason getGameOverReason() const { return gameOverReason; }
+    MovePhase getMovePhase() const { return movePhase; }
 
     bool isDebouncing() const { return debounceStartTime != 0; }
     Chess::PieceType getPromotionChoice() const { return promotionChoice; }
