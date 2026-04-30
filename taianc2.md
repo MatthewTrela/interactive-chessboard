@@ -68,3 +68,6 @@ Finished code without engine
 Added individual piece error correction
 
 Integration of game state with menu features
+
+Completed slides for final presentation
+- recorded video demos for functionality and high level requirements
