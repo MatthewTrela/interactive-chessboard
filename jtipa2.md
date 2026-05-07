@@ -44,20 +44,27 @@ Since we were able to check out an ESP32-S3 DevKitC unit for use on a breadboard
 
 For the sections of the MCU board design that directly relate to the ESP32-S3, I referenced the [example board design](https://courses.grainger.illinois.edu/ece445/wiki/#/esp32_example/index) for the majority of them. As part of my research, I had to look over the example design and parse through the sections that were relevant to our project. Ultimately, I chose to copy over the ESP32-S3 Module section, some parts of the I/O section, and the Debug Header section. I also included four mounting holes on our board. For our project, we do not need H-bridges for motor control or any current sensing circuity. The current draw of any of our components should be steady and small enough to not need any monitoring. Since the power supply that we want to use is a power bank with either a USB-C or USB-A output, the Battery Input and RVP section does not really apply. Based on my earlier research, it would be better for us to use a buck converter so the 3.3V Power section cannot be used. For the I/O section, I copied over the subcircuit for the Micro-B USB connection and the setup for the pin headers that would connect to Tx and Rx on the microcontroller.  
 
-[schems: ESP32-S3 module, Debug Header, ESP32 I/O]
+<img width="1118" height="411" alt="Image" src="https://github.com/user-attachments/assets/f22e6275-2012-4f1b-88f7-969e41cb23d5" />
+
+<img width="904" height="733" alt="Image" src="https://github.com/user-attachments/assets/575fc20d-84b6-404d-ba82-fe8b98cb6a79" />
+
+<img width="680" height="636" alt="Image" src="https://github.com/user-attachments/assets/4af358b4-a235-4523-bae7-07889afd0d67" />
 
 Since the Breadboard Demo would be happening in a couple of weeks, a lot of our prototyping and testing would happen through preparation for that. Therefore, the main purpose of this first order was to create a proof-of-concept design which we could use to test SMD components, like the microcontroller and power conversion circuitry. As a result, connections to LEDs and User I/O components was not really factored in. We also ultimately decided to move the GPIO expanders to the sensor board. 
 
 With that in mind, the further research that I needed to do was directed towards the power subsystem. The power bank that we wanted to use had USB-A and USB-C outputs. USB-A to USB-C cables are very common so it would be feasible to include either connection on the MCU board. I initially wanted to work with a USB-C connector because I felt it would be easier to work with since it is a newer technology that is more widely becoming the standard. The research that I did seemed to validate this thinking for this project. I found [this](https://forum.digikey.com/t/simple-way-to-use-usb-type-c-to-get-5v-at-up-to-3a-15w/7016) forum post on the TechForum on the DigiKey website. In this post, a DigiKey employee shared a USB-C Breakout Board from Sparkfun. According to the DigiKey employee, if a USB-C connector is set up in a similar way to the design of the breakout board, 5V at up to 3A can be supplied through the USB-C connector from an external power source. This perfectly matches the specifications of our power bank. From this information, I added a USB-C receptacle to the design on KiCad. Since this is only for power, I added the version that is power only. I grounded the GND connection and I left the SHIELD connection unconnected based on how the Micro-B USB connector was set up. I connected one 5.1k ohm resistor between GND and each CC pin on the USB-C connector based on the information in the forum post. From on my research, VBUS is where the power comes from. In order to more safely test and validate that we were able to receive 5V with this setup, I added a [test point](https://www.digikey.com/en/products/detail/keystone-electronics/5000/255326) followed by a solder jumper to isolate this section. I also connected a 1000 uF capacitor after the solder jumper to help stabilize the 5V supply for the LEDs. To make testing and validation easier and more flexibile, I connected one banana jack footprint to the 5V net after the solder jumper and another to the GND net. This would allow us to connect a lab power supply to the board to provide a more reliable power supply. For this supply, there is also a test point for verification. 
 
-[schem: 5v power]
+<img width="1139" height="679" alt="Image" src="https://github.com/user-attachments/assets/a39e94c7-6af7-4103-8298-011c57c2b477" />
 
 For the 3.3V power conversion subcircuit, I needed to find a buck converter that could step down to 3.3V from 5V while still  providing 3A. I also considered it important that the buck converter was reliable, easy to work with, and low-cost. Through my research, I identified [this](https://www.digikey.com/en/products/detail/diodes-incorporated/AP62300TWU-7/12702558) converter. Looking through the [datasheet](https://www.diodes.com/assets/Datasheets/AP62300_AP62301_AP62300T.pdf) for this device, I felt that it fit all of my requirements. The datasheet includes a schematic of a typical application circuit and a table of recommended components for the application circuit which lists components for a circuit that steps down to 3.3V. This allowed me to very easily integrate this buck converter into our MCU board PCB design. To isolate this circuit for testing and verification, there is a test point and solder jumper like with the 5V power subcircuit. There are also banana jack connection points and a test point for the lab power supply. 
 
-[typical circuit pic & recommended comp pic]
-[schem: 3.3V power] 
+<img width="918" height="477" alt="Image" src="https://github.com/user-attachments/assets/d039d783-9020-4e21-97fb-f31b5eb9aa68" />
 
-[full r1 schem]
+<img width="1398" height="336" alt="Image" src="https://github.com/user-attachments/assets/78d723fd-f5f7-4182-bd07-a189739c84a5" />
+
+<img width="1219" height="430" alt="Image" src="https://github.com/user-attachments/assets/6789c89e-34dc-4e39-bb4e-99425429b11c" />
+
+<img width="1141" height="792" alt="Image" src="https://github.com/user-attachments/assets/31cdff26-41c7-4b88-80c3-ee6130835eaf" />
 
 ## Week of 2026-02-23 : Main Board PCB Design Work (cont.)
 
@@ -67,13 +74,13 @@ The PCB has the maximum allowed dimensions of 100 mm x 100 mm. Since we are not 
 
 For routing, I used the custom track widths recommended in the CAD Assignment. I used track widths that are thinner for data signals and thicker track widths for power connections. The mounting holes are placed wherever there is space. 
 
-[layout: pcb v1]
+<img width="907" height="858" alt="Image" src="https://github.com/user-attachments/assets/f6792e37-2ff4-45dc-abac-821621573b85" />
 
 ## Week of 2026-03-02 : ECE445 Assignments
 
 Since the MCU board PCB design was submitted last week, my work this week was mostly preparing for the Design Review and Breadboard Demo with Tim and Matthew. I also started looking into specific components to order for the MCU board. 
 
-## Week of 2026-03-09 : Round 1 Main MCU Board
+## Week of 2026-03-09 : Round 1 Main MCU Board & PCB Revisions
 
 The MCU board PCB from the Round 1 order arrived this week. My work this week involved starting to solder on any components that we had on hand. I also finalized the final list of components that need to be ordered for both the inital order and any future orders. I also had a goal to put in a revised MCU board PCB design for the third round of orders. This order would've hopefully arrived a little bit after spring break which would hopefully give us a lot of runway to test the design before the Progress Demo. I started to revise the design this week but I was not able to finish it before the Round 3 submission deadline.
 
@@ -82,33 +89,33 @@ I was able to finish organizing the pin header connections to the microcontrolle
 I did some research into how to set up the hardware and connectors for the LED strip. I found this guide on a [WLED Wiki](https://kno.wled.ge/basics/getting-started/) which showed a set-up for the WS281B LEDs on the LED strip. I followed this guide and incorporated its suggestions in the revisions. This mostly involved connecting a data resistor and level shifter to the pin assigned to the data signal for the LEDs. This is necessary because the microcontroller outputs signals at too low of a voltage level to be reliably read by the LEDs. Therefore, a level shifter is necessary to increase that voltage. 
 
 
-[schem: r4 i/o]
+<img width="1411" height="536" alt="Image" src="https://github.com/user-attachments/assets/9f0005b9-47c4-4db7-a1c4-23ab002018b5" />
 
 I included some [diodes](https://www.digikey.com/en/products/detail/littelfuse-inc/SP1250-01ETG/12759480?curr=usd&utm_campaign=buynow&utm_medium=aggregator&utm_source=octopart) and [fuses](https://www.digikey.com/en/products/detail/littelfuse-inc/0805L300SLWR/3661960) for ESD protection in the 5V power section.
 
-[schem: r4 5v]
+<img width="1345" height="782" alt="Image" src="https://github.com/user-attachments/assets/0cdd46cb-4ae1-4555-b783-c63cf6941a02" />
 
 I also changed the footprint for the capacitor on the 5V net to a through hole footprint for an aluminum capacitor because a capacitor with 1000 uF of capacitance is more accessible when it's an aluminum capacitor. 
 
-[schems: board v2]
+<img width="1145" height="790" alt="Image" src="https://github.com/user-attachments/assets/072e90b1-34d3-46a4-bbb4-dcb12f1192df" />
 
-## Week of 2026-03-23 : Round 1 Main MCU Board (cont.) & PCB Revisions
+## Week of 2026-03-23 : Round 1 Main MCU Board & PCB Revisions (cont.)
 
 Since the components arrived, my work this week focused on the finishing soldering the components onto the MCU board and testing the functionality. During my testing, I was able to verify using a multimeter that there was a stable 5V supply to the board when connected to the power bank. When I tested the 3.3V conversion circuit, there was not a stable 3.3V supply. In hindight, it is a bit of a silver lining that we were unable to submit a revision for Round 3 because this is really important information. Without reliable 3.3V power, our device would have basically no functionaility. 
 
 Having identified that the 3.3V conversion circuitry had issues, I looked into how to address this issue. I compared the schematic on KiCad with the example circuit on the [datasheet](https://www.diodes.com/assets/Datasheets/AP62300_AP62301_AP62300T.pdf). I saw no major discrepancies. I knew that this circuit should work, in theory, because it was from the datasheet. After reading through the datasheet more closely, I determined that the issue(s) were either with irregularities in the components, soldering issues, or inefficient routing that introduces too much noise or limits heat dissipation. I did use the continuity feature on a multimeter to test for bridging. I did not identify anything but there could have been things that I missed. I revised the PCB design to make the routing more efficient for the Round 4 submission. I also asked for 2 oz copper layers instead of 1 oz layers to also improve heat dissipation. 
 
-[layout: new 3.3v section]
+<img width="508" height="786" alt="Image" src="https://github.com/user-attachments/assets/d29217f8-cadc-4566-9168-9f86edc6e421" />
 
 I also finalized the layout for the other sections of the PCB design that were already revised at the schematic level. The ESP32-S3 Module section was the only section that did not have major revisions.  
 
-[layout: board v2]
+<img width="854" height="849" alt="Image" src="https://github.com/user-attachments/assets/12302911-104a-4dec-b3fa-5afeb512ccca" />
 
 ## Week of 2026-03-30 : Round 1 Main MCU Board (cont.) & Round 4 Main MCU Board Revisions
 
 I continued testing the Round 1 MCU board to try to get it work for the Progress Demo the following week. Even when I tried soldering on new components, I could not get the 3.3V conversion circuit to work. With 5V supplied by the power bank and 3.3V supplied by a lab power supply, I was able to flash a very simple program onto the microcontroller which just oscillates the output at one of the GPIO pins. This is setup is not super easy to work with for the Progress Demo but it was encouraging to see that there should be little issue, from a hardware standpoint, implementing full functionality if we are able to get the 3.3V conversion circuit working. 
 
-[oscill]
+<img width="614" height="627" alt="Image" src="https://github.com/user-attachments/assets/50e2923d-dc5f-4287-b278-7449e204867d" />
 
 I also adjusted some of the traces on the PCB layout because of the requirements laid out by JLCPCB regarding boards with 2 oz layers was different from the requirements for boards with 1 oz layers. 
 
@@ -124,15 +131,17 @@ When the board did arrive at the end of the week, I worked on soldering on the c
 
 I finished soldering on any other components that were missing. Afterwards, I started the process of testing and validating the functionality of the Round 4 MCU board. Once the soldering was completed, I was able to verify with the multimeter that, when connected to only the power bank, there was steady 3.3V and 5V supply. I also flashed a simple program that oscillates the output at one of the GPIO pins onto the microcontroller. I used an oscilloscope to confirm that the signal could be read and was behaving as expected. This served as the inital testing and verification process for the MCU board functionality. 
 
-[mult: 3.3v]
+<img width="641" height="370" alt="Image" src="https://github.com/user-attachments/assets/204b570f-a3a4-46dd-ad87-91a663d47d33" />
 
 Once Matthew and Tim started working with the MCU board, they had some issues that seemed to be caused by discrepancies with the hardware. Once I did some testing, I agreed. I looked at the KiCad files for the Round 4 iteration more closely, and I noticed that the connections to one of the transistors in the programming circuit for the ESP32-S3 was routed incorrectly. This was a very small mistake that must have occurred when I copied over this section from the previous iteration. It did, unfortunately, have a big impact on the functionality of the board at a higher level. To address this issue, I used wires to physically reroute the connections to match the correct circuit design. Once I did this, there were no longer any major issues with the functionality of the MCU board. 
 
-[schem w/ issue]
+Schematic with issue:
+<img width="981" height="759" alt="Image" src="https://github.com/user-attachments/assets/54cc9c25-8d62-4d3a-954b-12a2cae45132" />
 
-[correct schem]
+Correct schematic:
+<img width="846" height="638" alt="Image" src="https://github.com/user-attachments/assets/1fbf4717-a6ba-4f47-b0b3-44bc4986ab79" />
 
-[main board physical pic]
+<img width="514" height="493" alt="Image" src="https://github.com/user-attachments/assets/5c9d300e-722a-4d02-aaa5-8548c377e353" />
 
 ## Week of 2026-04-20 : Mock Demo & Presentation
 
